@@ -1,0 +1,48 @@
+{
+  "name": "wandergenie",
+  "version": "1.0.0",
+  "description": "AI-powered travel planning app with microservices architecture",
+  "main": "index.js",
+  "private": true,
+  "workspaces": [
+    "gateway",
+    "services/*",
+    "mobile"
+  ],
+  "scripts": {
+    "start:gateway": "cd gateway && npm start",
+    "start:user": "cd services/user && npm start",
+    "start:trip": "cd services/trip && npm start",
+    "start:planner": "cd services/planner && npm start",
+    "start:sharing": "cd services/sharing && npm start",
+    "start:notification": "cd services/notification && npm start",
+    "start:subscription": "cd services/subscription && npm start",
+    "start:location": "cd services/location && npm start",
+    "start:checklist": "cd services/checklist && npm start",
+    "dev": "concurrently \"npm run start:gateway\" \"npm run start:user\" \"npm run start:trip\" \"npm run start:planner\" \"npm run start:sharing\" \"npm run start:notification\" \"npm run start:subscription\" \"npm run start:location\" \"npm run start:checklist\"",
+    "test": "jest",
+    "lint": "eslint ."
+  },
+  "keywords": [
+    "travel",
+    "ai",
+    "microservices",
+    "graphql",
+    "react-native"
+  ],
+  "author": "WanderGenie Team",
+  "license": "MIT",
+  "devDependencies": {
+    "babel-plugin-module-resolver": "^5.0.2",
+    "concurrently": "^8.2.0",
+    "eslint": "^8.44.0",
+    "jest": "^29.6.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@react-navigation/native": "^7.1.6",
+    "@react-navigation/native-stack": "^7.3.10"
+  }
+}

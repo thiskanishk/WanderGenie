@@ -1,0 +1,248 @@
+version: '3.8'
+
+services:
+  # API Gateway
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=development
+      - PORT=4000
+      - JWT_SECRET=your_jwt_secret
+      - USER_SERVICE_URL=http://user-service:4001/graphql
+      - TRIP_SERVICE_URL=http://trip-service:4002/graphql
+      - PLANNER_SERVICE_URL=http://planner-service:4003/graphql
+      - SHARING_SERVICE_URL=http://sharing-service:4004/graphql
+      - NOTIFICATION_SERVICE_URL=http://notification-service:4005/graphql
+      - SUBSCRIPTION_SERVICE_URL=http://subscription-service:4006/graphql
+      - LOCATION_SERVICE_URL=http://location-service:4007/graphql
+      - CHECKLIST_SERVICE_URL=http://checklist-service:4008/graphql
+    depends_on:
+      - user-service
+      - trip-service
+      - planner-service
+      - sharing-service
+      - notification-service
+      - subscription-service
+      - location-service
+      - checklist-service
+    networks:
+      - wandergenie-network
+    restart: unless-stopped
+
+  # Microservices
+  user-service:
+    build:
+      context: ./services/user
+      dockerfile: Dockerfile
+    ports:
+      - "4001:4001"
+    environment:
+      - NODE_ENV=development
+      - PORT=4001
+      - JWT_SECRET=your_jwt_secret
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=wandergenie_users
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - wandergenie-network
+    restart: unless-stopped
+
+  trip-service:
+    build:
+      context: ./services/trip
+      dockerfile: Dockerfile
+    ports:
+      - "4002:4002"
+    environment:
+      - NODE_ENV=development
+      - PORT=4002
+      - JWT_SECRET=your_jwt_secret
+      - MONGO_URI=mongodb://mongo:27017/wandergenie_trips
+    depends_on:
+      - mongo
+      - redis
+    networks:
+      - wandergenie-network
+    restart: unless-stopped
+
+  planner-service:
+    build:
+      context: ./services/planner
+      dockerfile: Dockerfile
+    ports:
+      - "4003:4003"
+    environment:
+      - NODE_ENV=development
+      - PORT=4003
+      - JWT_SECRET=your_jwt_secret
+      - OPENAI_API_KEY=your_openai_api_key
+      - MONGO_URI=mongodb://mongo:27017/wandergenie_planners
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - mongo
+      - redis
+    networks:
+      - wandergenie-network
+    restart: unless-stopped
+
+  sharing-service:
+    build:
+      context: ./services/sharing
+      dockerfile: Dockerfile
+    ports:
+      - "4004:4004"
+    environment:
+      - NODE_ENV=development
+      - PORT=4004
+      - JWT_SECRET=your_jwt_secret
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=wandergenie_sharing
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - wandergenie-network
+    restart: unless-stopped
+
+  notification-service:
+    build:
+      context: ./services/notification
+      dockerfile: Dockerfile
+    ports:
+      - "4005:4005"
+    environment:
+      - NODE_ENV=development
+      - PORT=4005
+      - JWT_SECRET=your_jwt_secret
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=wandergenie_notifications
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - REDIS_URL=redis://redis:6379
+      - EMAIL_SERVICE=sendgrid
+      - SENDGRID_API_KEY=your_sendgrid_api_key
+      - FCM_SERVER_KEY=your_fcm_server_key
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - wandergenie-network
+    restart: unless-stopped
+
+  subscription-service:
+    build:
+      context: ./services/subscription
+      dockerfile: Dockerfile
+    ports:
+      - "4006:4006"
+    environment:
+      - NODE_ENV=development
+      - PORT=4006
+      - JWT_SECRET=your_jwt_secret
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=wandergenie_subscriptions
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - STRIPE_SECRET_KEY=your_stripe_secret_key
+      - RAZORPAY_KEY_ID=your_razorpay_key_id
+      - RAZORPAY_KEY_SECRET=your_razorpay_key_secret
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - wandergenie-network
+    restart: unless-stopped
+
+  location-service:
+    build:
+      context: ./services/location
+      dockerfile: Dockerfile
+    ports:
+      - "4007:4007"
+    environment:
+      - NODE_ENV=development
+      - PORT=4007
+      - JWT_SECRET=your_jwt_secret
+      - MONGO_URI=mongodb://mongo:27017/wandergenie_locations
+      - MAPBOX_API_KEY=your_mapbox_api_key
+    depends_on:
+      - mongo
+      - redis
+    networks:
+      - wandergenie-network
+    restart: unless-stopped
+
+  checklist-service:
+    build:
+      context: ./services/checklist
+      dockerfile: Dockerfile
+    ports:
+      - "4008:4008"
+    environment:
+      - NODE_ENV=development
+      - PORT=4008
+      - JWT_SECRET=your_jwt_secret
+      - MONGO_URI=mongodb://mongo:27017/wandergenie_checklists
+    depends_on:
+      - mongo
+    networks:
+      - wandergenie-network
+    restart: unless-stopped
+
+  # Databases and Cache
+  postgres:
+    image: postgres:14-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_MULTIPLE_DATABASES=wandergenie_users,wandergenie_sharing,wandergenie_notifications,wandergenie_subscriptions
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh
+    networks:
+      - wandergenie-network
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:5
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=example
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - wandergenie-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - wandergenie-network
+    restart: unless-stopped
+
+networks:
+  wandergenie-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  mongo-data:
+  redis-data: 
