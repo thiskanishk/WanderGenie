@@ -278,7 +278,8 @@ const HomeScreen: React.FC = () => {
     
     try {
       // Call the backend API to generate the trip plan
-      const response = await fetch("http://localhost:3000/api/generate-itinerary", {
+      // Replace 192.168.1.4 with your actual local IP address
+      const response = await fetch("http://192.168.1.4:3001/api/ai/plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -290,21 +291,26 @@ const HomeScreen: React.FC = () => {
       });
 
       if (!response.ok) {
-        throw new Error(`Server responded with status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Server error response:', errorData);
+        throw new Error(
+          errorData.error || `Server responded with status: ${response.status}`
+        );
       }
 
       const data = await response.json();
+      console.log('Received trip plan from backend:', data.tripPlan.destination);
       
       // Navigate to results screen with the trip plan data
       navigation.navigate('AIPlannerResult', { 
         tripPlan: data.tripPlan,
         userSelections: data.userSelections
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to generate trip plan:', error);
       Alert.alert(
         'Generation Failed',
-        'We couldn\'t generate your trip plan at this time. Please try again later.',
+        `We couldn't generate your trip plan: ${error.message || 'Unknown error'}. Please check your network connection and try again.`,
         [{ text: 'OK' }]
       );
     } finally {
