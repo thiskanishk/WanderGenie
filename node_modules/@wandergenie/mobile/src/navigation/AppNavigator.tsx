@@ -8,6 +8,7 @@ import { ParamListBase } from '@react-navigation/native';
 // Import actual screens
 import HomeScreen from '../screens/HomeScreen';
 import AITripPlannerScreen from '../screens/AITripPlannerScreen';
+import AIPlannerResultScreen from '../screens/AIPlannerResultScreen';
 
 // Create placeholder components for missing screens
 const PlaceholderScreen: React.FC = () => null;
@@ -66,6 +67,13 @@ function HomeStackNavigator() {
         name="AIPlanner" 
         component={AITripPlannerScreen} 
         options={{ title: 'AI Trip Planner' }}
+      />
+      <HomeStack.Screen 
+        name="AIPlannerResult" 
+        component={AIPlannerResultScreen} 
+        options={{ 
+          headerShown: false,
+        }} 
       />
       <HomeStack.Screen 
         name="TripDetail" 

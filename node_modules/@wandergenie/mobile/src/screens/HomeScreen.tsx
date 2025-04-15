@@ -11,6 +11,7 @@ import {
   TextInput,
   RefreshControl,
   Animated,
+  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,6 +21,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { ThunkDispatch } from '@reduxjs/toolkit';
 import { AnyAction } from 'redux';
 import { LinearGradient } from 'expo-linear-gradient';
+import axios from 'axios';
+import { OPENAI_API_KEY } from '@env'; // Make sure to install react-native-dotenv
 
 import { fetchTrips, Trip } from '../store/slices/tripsSlice';
 import { useAppSelector } from '../hooks/reduxHooks';
@@ -123,6 +126,7 @@ const HomeScreen: React.FC = () => {
   const [selectedVibe, setSelectedVibe] = useState<TripVibe | null>(null);
   const [selectedBudget, setSelectedBudget] = useState<TripBudget | null>(null);
   const [selectedDuration, setSelectedDuration] = useState<TripDuration | null>(null);
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState<boolean>(false);
   
   // States for specific location tab
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -223,7 +227,36 @@ const HomeScreen: React.FC = () => {
   // Switch to next step in smart suggestion
   const goToNextStep = () => {
     if (currentStep < 4) {
-      setCurrentStep(currentStep + 1);
+      // Animate step transition
+      Animated.sequence([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 30,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setCurrentStep(currentStep + 1);
+        // Reset animation values and animate in the new step
+        fadeAnim.setValue(0);
+        slideAnim.setValue(30);
+        Animated.parallel([
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(slideAnim, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      });
     }
   };
   
@@ -235,14 +268,48 @@ const HomeScreen: React.FC = () => {
   };
   
   // Generate trip plan based on selections
-  const generateSmartPlan = () => {
-    // Dispatch to Redux or navigate with params
-    navigation.navigate('AIPlanner', {
-      tripType: selectedTripType,
-      vibe: selectedVibe,
-      budget: selectedBudget,
-      duration: selectedDuration,
-    });
+  const generateSmartPlan = async () => {
+    if (!selectedTripType || !selectedVibe || !selectedBudget || !selectedDuration) {
+      return; // Don't proceed if any selection is missing
+    }
+    
+    // Set loading state
+    setIsGeneratingPlan(true);
+    
+    try {
+      // Call the backend API to generate the trip plan
+      const response = await fetch("http://localhost:3000/api/generate-itinerary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          tripType: selectedTripType, 
+          vibe: selectedVibe, 
+          budget: selectedBudget, 
+          duration: selectedDuration 
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Navigate to results screen with the trip plan data
+      navigation.navigate('AIPlannerResult', { 
+        tripPlan: data.tripPlan,
+        userSelections: data.userSelections
+      });
+    } catch (error) {
+      console.error('Failed to generate trip plan:', error);
+      Alert.alert(
+        'Generation Failed',
+        'We couldn\'t generate your trip plan at this time. Please try again later.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsGeneratingPlan(false);
+    }
   };
   
   // Plan trip based on selected destination
@@ -294,7 +361,8 @@ const HomeScreen: React.FC = () => {
           <View 
             style={[
               styles.progressStep, 
-              index + 1 <= currentStep && styles.activeProgressStep
+              index + 1 <= currentStep && styles.activeProgressStep,
+              index + 1 === currentStep && styles.currentProgressStep
             ]}
           >
             <Text style={[
@@ -306,7 +374,8 @@ const HomeScreen: React.FC = () => {
           </View>
           <Text style={[
             styles.progressStepText,
-            index + 1 <= currentStep && styles.activeProgressStepText
+            index + 1 <= currentStep && styles.activeProgressStepText,
+            index + 1 === currentStep && styles.currentProgressStepText
           ]}>
             {step}
           </Text>
@@ -430,18 +499,54 @@ const HomeScreen: React.FC = () => {
             <Ionicons name="arrow-forward" size={20} color="#fff" />
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity
-            style={[
-              styles.generateButton,
-              !selectedDuration ? styles.disabledButton : null
-            ]}
-            onPress={generateSmartPlan}
-            disabled={!selectedDuration}
-          >
-            <Text style={styles.generateButtonText}>✨ Generate Smart Plan</Text>
-          </TouchableOpacity>
+          isGeneratingPlan ? (
+            <View style={styles.generateButton}>
+              <ActivityIndicator color="#fff" size="small" style={{marginRight: 8}} />
+              <Text style={styles.generateButtonText}>Generating Trip...</Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={[
+                styles.generateButton,
+                !selectedDuration ? styles.disabledButton : null
+              ]}
+              onPress={generateSmartPlan}
+              disabled={!selectedDuration}
+            >
+              <Text style={styles.generateButtonText}>✨ Generate Smart Plan</Text>
+            </TouchableOpacity>
+          )
         )}
       </View>
+      
+      {/* Journey summary when all selections are made */}
+      {selectedTripType && selectedVibe && selectedBudget && selectedDuration && (
+        <View style={styles.summaryContainer}>
+          <Text style={styles.summaryTitle}>Your Journey Preferences</Text>
+          <View style={styles.summaryGrid}>
+            <View style={styles.summaryItem}>
+              <Ionicons name="map-outline" size={16} color="#6200ee" />
+              <Text style={styles.summaryLabel}>Trip Type</Text>
+              <Text style={styles.summaryValue}>{selectedTripType}</Text>
+            </View>
+            <View style={styles.summaryItem}>
+              <Ionicons name="heart-outline" size={16} color="#6200ee" />
+              <Text style={styles.summaryLabel}>Vibe</Text>
+              <Text style={styles.summaryValue}>{selectedVibe}</Text>
+            </View>
+            <View style={styles.summaryItem}>
+              <Ionicons name="cash-outline" size={16} color="#6200ee" />
+              <Text style={styles.summaryLabel}>Budget</Text>
+              <Text style={styles.summaryValue}>{selectedBudget}</Text>
+            </View>
+            <View style={styles.summaryItem}>
+              <Ionicons name="time-outline" size={16} color="#6200ee" />
+              <Text style={styles.summaryLabel}>Duration</Text>
+              <Text style={styles.summaryValue}>{selectedDuration}</Text>
+            </View>
+          </View>
+        </View>
+      )}
     </Animated.View>
   );
   
@@ -834,6 +939,15 @@ const styles = StyleSheet.create({
   activeProgressStep: {
     backgroundColor: '#6200ee',
   },
+  currentProgressStep: {
+    borderWidth: 2,
+    borderColor: '#6200ee',
+    shadowColor: '#6200ee',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 3,
+  },
   progressStepNumber: {
     fontSize: 12,
     fontWeight: 'bold',
@@ -849,6 +963,10 @@ const styles = StyleSheet.create({
   },
   activeProgressStepText: {
     color: '#6200ee',
+    fontWeight: 'bold',
+  },
+  currentProgressStepText: {
+    fontSize: 11,
     fontWeight: 'bold',
   },
   progressLine: {
@@ -1159,6 +1277,42 @@ const styles = StyleSheet.create({
   },
   aiPlannerSection: {
     marginBottom: 25,
+  },
+  summaryContainer: {
+    marginTop: 20,
+    padding: 16,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#6200ee',
+  },
+  summaryTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    color: '#333',
+  },
+  summaryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  summaryItem: {
+    width: '48%',
+    flexDirection: 'column',
+    marginBottom: 12,
+    alignItems: 'flex-start',
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+    marginBottom: 2,
+  },
+  summaryValue: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
   },
 });
 
