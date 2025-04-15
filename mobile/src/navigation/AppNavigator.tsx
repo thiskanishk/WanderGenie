@@ -5,8 +5,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ParamListBase } from '@react-navigation/native';
 
-// Keep only the screens that exist
+// Import actual screens
 import HomeScreen from '../screens/HomeScreen';
+import AITripPlannerScreen from '../screens/AITripPlannerScreen';
 
 // Create placeholder components for missing screens
 const PlaceholderScreen: React.FC = () => null;
@@ -15,7 +16,6 @@ const PlaceholderScreen: React.FC = () => null;
 const TripsScreen = PlaceholderScreen;
 const ProfileScreen = PlaceholderScreen; 
 const TripDetailScreen = PlaceholderScreen;
-const AITripPlannerScreen = PlaceholderScreen;
 const ChecklistScreen = PlaceholderScreen;
 const ShareTripScreen = PlaceholderScreen;
 const SettingsScreen = PlaceholderScreen;
@@ -179,6 +179,14 @@ export function SimpleAppNavigator() {
       }}
     >
       <Stack.Screen name="Home" component={HomeScreen} />
+      <Stack.Screen 
+        name="AIPlanner" 
+        component={AITripPlannerScreen} 
+        options={{ 
+          title: 'AI Trip Planner',
+          headerShown: true 
+        }}
+      />
     </Stack.Navigator>
   );
 } 

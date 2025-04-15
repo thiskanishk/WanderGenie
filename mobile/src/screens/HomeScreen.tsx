@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,14 +10,16 @@ import {
   FlatList,
   TextInput,
   RefreshControl,
+  Animated,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useDispatch } from 'react-redux';
-import { AnyAction } from 'redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { ThunkDispatch } from '@reduxjs/toolkit';
+import { AnyAction } from 'redux';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { fetchTrips, Trip } from '../store/slices/tripsSlice';
 import { useAppSelector } from '../hooks/reduxHooks';
@@ -52,15 +54,79 @@ interface RootState {
   trips: TripsState;
 }
 
+// Trip types
+type TripType = 'Beach' | 'City' | 'Mountain' | 'Cultural' | 'Adventure';
+type TripVibe = 'Relaxing' | 'Party' | 'Family' | 'Romantic' | 'Solo';
+type TripBudget = 'Budget' | 'Mid-Range' | 'Luxury';
+type TripDuration = '1-3 Days' | '4-7 Days' | '1-2 Weeks' | '2+ Weeks';
+
+// Popular destinations for autocomplete
+const POPULAR_DESTINATIONS = [
+  { id: '1', name: 'Paris', country: 'France' },
+  { id: '2', name: 'Bali', country: 'Indonesia' },
+  { id: '3', name: 'Tokyo', country: 'Japan' },
+  { id: '4', name: 'New York', country: 'USA' },
+  { id: '5', name: 'Barcelona', country: 'Spain' },
+  { id: '6', name: 'Dubai', country: 'UAE' },
+  { id: '7', name: 'Santorini', country: 'Greece' },
+  { id: '8', name: 'London', country: 'UK' },
+];
+
+// Mock destination details
+const DESTINATION_DETAILS = {
+  'Paris': {
+    weather: 'Mild, 15-25°C in summer',
+    visa: 'Schengen visa required for most non-EU citizens',
+    budget: '€100-150 per day',
+    attractions: 'Eiffel Tower, Louvre, Notre Dame',
+  },
+  'Bali': {
+    weather: 'Tropical, 26-33°C year-round',
+    visa: 'Visa-free for many countries (30 days)',
+    budget: '$50-100 per day',
+    attractions: 'Beaches, Temples, Rice Terraces',
+  },
+  'Tokyo': {
+    weather: 'Seasonal, hot summers, cold winters',
+    visa: 'Required for most countries',
+    budget: '$100-200 per day',
+    attractions: 'Mount Fuji, Imperial Palace, Shibuya Crossing',
+  },
+  'New York': {
+    weather: 'Seasonal, hot summers, cold winters',
+    visa: 'US visa or ESTA required',
+    budget: '$150-300 per day',
+    attractions: 'Times Square, Central Park, Empire State Building',
+  },
+  'Barcelona': {
+    weather: 'Mediterranean, warm summers',
+    visa: 'Schengen visa required for most non-EU citizens',
+    budget: '€80-150 per day',
+    attractions: 'Sagrada Familia, Park Güell, Gothic Quarter',
+  },
+};
+
 const HomeScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<HomeScreenNavigationProp>();
   const dispatch = useDispatch<AppThunkDispatch>();
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   
-  // New state variables from HomeScreen.js
-  const [mode, setMode] = useState<'smart' | 'specific'>('smart');
-  const [input, setInput] = useState<string>('');
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+  
+  // States for selected tab and form inputs
+  const [activeTab, setActiveTab] = useState<'smart' | 'specific'>('smart');
+  const [currentStep, setCurrentStep] = useState<number>(1);
+  const [selectedTripType, setSelectedTripType] = useState<TripType | null>(null);
+  const [selectedVibe, setSelectedVibe] = useState<TripVibe | null>(null);
+  const [selectedBudget, setSelectedBudget] = useState<TripBudget | null>(null);
+  const [selectedDuration, setSelectedDuration] = useState<TripDuration | null>(null);
+  
+  // States for specific location tab
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedDestination, setSelectedDestination] = useState<string | null>(null);
   
   // Get trips from Redux store
   const { trips, isLoading } = useAppSelector((state: RootState) => state.trips);
@@ -104,6 +170,390 @@ const HomeScreen: React.FC = () => {
     navigation.navigate('TripDetail' as never, { tripId } as never);
   };
   
+  // Animation effect
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+  
+  // Animation for tab changes
+  useEffect(() => {
+    // Reset animation values
+    fadeAnim.setValue(0);
+    slideAnim.setValue(30);
+    
+    // Start animation
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    
+    // Reset form values when switching tabs
+    if (activeTab === 'smart') {
+      setCurrentStep(1);
+      setSelectedTripType(null);
+      setSelectedVibe(null);
+      setSelectedBudget(null);
+      setSelectedDuration(null);
+    } else {
+      setSearchQuery('');
+      setSelectedDestination(null);
+      setShowSuggestions(false);
+    }
+  }, [activeTab]);
+  
+  // Switch to next step in smart suggestion
+  const goToNextStep = () => {
+    if (currentStep < 4) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+  
+  // Switch to previous step in smart suggestion
+  const goToPreviousStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+  
+  // Generate trip plan based on selections
+  const generateSmartPlan = () => {
+    // Dispatch to Redux or navigate with params
+    navigation.navigate('AIPlanner', {
+      tripType: selectedTripType,
+      vibe: selectedVibe,
+      budget: selectedBudget,
+      duration: selectedDuration,
+    });
+  };
+  
+  // Plan trip based on selected destination
+  const planSpecificTrip = () => {
+    if (selectedDestination) {
+      navigation.navigate('AIPlanner', {
+        destination: selectedDestination,
+      });
+    }
+  };
+  
+  // Filter destinations based on search query
+  const filteredDestinations = POPULAR_DESTINATIONS.filter(
+    dest => 
+      dest.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      dest.country.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  
+  // Selection card component for smart suggestions
+  const SelectionCard = ({ 
+    title, 
+    isSelected, 
+    onSelect 
+  }: { 
+    title: string; 
+    isSelected: boolean; 
+    onSelect: () => void 
+  }) => (
+    <TouchableOpacity
+      style={[styles.selectionCard, isSelected && styles.selectedCard]}
+      onPress={onSelect}
+    >
+      <Text style={[styles.selectionCardText, isSelected && styles.selectedCardText]}>
+        {title}
+      </Text>
+      {isSelected && (
+        <View style={styles.checkmarkContainer}>
+          <Ionicons name="checkmark-circle" size={18} color="#fff" />
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+  
+  // Render progress steps for smart suggestion
+  const renderProgressSteps = () => (
+    <View style={styles.progressContainer}>
+      {['Trip Type', 'Vibe', 'Budget', 'Duration'].map((step, index) => (
+        <View key={step} style={styles.progressStepWrapper}>
+          <View 
+            style={[
+              styles.progressStep, 
+              index + 1 <= currentStep && styles.activeProgressStep
+            ]}
+          >
+            <Text style={[
+              styles.progressStepNumber, 
+              index + 1 <= currentStep && styles.activeProgressStepNumber
+            ]}>
+              {index + 1}
+            </Text>
+          </View>
+          <Text style={[
+            styles.progressStepText,
+            index + 1 <= currentStep && styles.activeProgressStepText
+          ]}>
+            {step}
+          </Text>
+          {index < 3 && (
+            <View style={[
+              styles.progressLine,
+              index + 1 < currentStep && styles.activeProgressLine
+            ]} />
+          )}
+        </View>
+      ))}
+    </View>
+  );
+  
+  // Render smart suggestion form based on current step
+  const renderSmartSuggestionForm = () => (
+    <Animated.View style={[
+      styles.formContainer,
+      {
+        opacity: fadeAnim,
+        transform: [{ translateY: slideAnim }]
+      }
+    ]}>
+      {renderProgressSteps()}
+      
+      <View style={styles.stepContent}>
+        {currentStep === 1 && (
+          <>
+            <Text style={styles.stepTitle}>What type of trip are you looking for?</Text>
+            <View style={styles.selectionGrid}>
+              {(['Beach', 'City', 'Mountain', 'Cultural', 'Adventure'] as TripType[]).map((type) => (
+                <SelectionCard
+                  key={type}
+                  title={type}
+                  isSelected={selectedTripType === type}
+                  onSelect={() => setSelectedTripType(type)}
+                />
+              ))}
+            </View>
+          </>
+        )}
+        
+        {currentStep === 2 && (
+          <>
+            <Text style={styles.stepTitle}>What vibe are you going for?</Text>
+            <View style={styles.selectionGrid}>
+              {(['Relaxing', 'Party', 'Family', 'Romantic', 'Solo'] as TripVibe[]).map((vibe) => (
+                <SelectionCard
+                  key={vibe}
+                  title={vibe}
+                  isSelected={selectedVibe === vibe}
+                  onSelect={() => setSelectedVibe(vibe)}
+                />
+              ))}
+            </View>
+          </>
+        )}
+        
+        {currentStep === 3 && (
+          <>
+            <Text style={styles.stepTitle}>What's your budget?</Text>
+            <View style={styles.selectionGrid}>
+              {(['Budget', 'Mid-Range', 'Luxury'] as TripBudget[]).map((budget) => (
+                <SelectionCard
+                  key={budget}
+                  title={budget}
+                  isSelected={selectedBudget === budget}
+                  onSelect={() => setSelectedBudget(budget)}
+                />
+              ))}
+            </View>
+          </>
+        )}
+        
+        {currentStep === 4 && (
+          <>
+            <Text style={styles.stepTitle}>How long will your trip be?</Text>
+            <View style={styles.selectionGrid}>
+              {(['1-3 Days', '4-7 Days', '1-2 Weeks', '2+ Weeks'] as TripDuration[]).map((duration) => (
+                <SelectionCard
+                  key={duration}
+                  title={duration}
+                  isSelected={selectedDuration === duration}
+                  onSelect={() => setSelectedDuration(duration)}
+                />
+              ))}
+            </View>
+          </>
+        )}
+      </View>
+      
+      <View style={styles.navigationButtonsContainer}>
+        {currentStep > 1 && (
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={goToPreviousStep}
+          >
+            <Ionicons name="arrow-back" size={20} color="#6200ee" />
+            <Text style={styles.backButtonText}>Back</Text>
+          </TouchableOpacity>
+        )}
+        
+        {currentStep < 4 ? (
+          <TouchableOpacity
+            style={[
+              styles.nextButton,
+              (currentStep === 1 && !selectedTripType) ||
+              (currentStep === 2 && !selectedVibe) ||
+              (currentStep === 3 && !selectedBudget)
+                ? styles.disabledButton
+                : null
+            ]}
+            onPress={goToNextStep}
+            disabled={
+              (currentStep === 1 && !selectedTripType) ||
+              (currentStep === 2 && !selectedVibe) ||
+              (currentStep === 3 && !selectedBudget)
+            }
+          >
+            <Text style={styles.nextButtonText}>Next</Text>
+            <Ionicons name="arrow-forward" size={20} color="#fff" />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[
+              styles.generateButton,
+              !selectedDuration ? styles.disabledButton : null
+            ]}
+            onPress={generateSmartPlan}
+            disabled={!selectedDuration}
+          >
+            <Text style={styles.generateButtonText}>✨ Generate Smart Plan</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </Animated.View>
+  );
+  
+  // Render destination search for specific location
+  const renderSpecificLocationSearch = () => (
+    <Animated.View style={[
+      styles.formContainer,
+      {
+        opacity: fadeAnim,
+        transform: [{ translateY: slideAnim }]
+      }
+    ]}>
+      <View style={styles.searchContainer}>
+        <Text style={styles.searchLabel}>Search for a destination</Text>
+        <View style={styles.searchInputContainer}>
+          <Ionicons name="search" size={20} color="#6200ee" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Try Paris, Bali, Tokyo..."
+            value={searchQuery}
+            onChangeText={(text) => {
+              setSearchQuery(text);
+              setShowSuggestions(true);
+              setSelectedDestination(null);
+            }}
+            onFocus={() => setShowSuggestions(true)}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              style={styles.clearButton}
+              onPress={() => {
+                setSearchQuery('');
+                setSelectedDestination(null);
+              }}
+            >
+              <Ionicons name="close-circle" size={20} color="#999" />
+            </TouchableOpacity>
+          )}
+        </View>
+        
+        {showSuggestions && searchQuery.length > 0 && (
+          <View style={styles.suggestionsContainer}>
+            {filteredDestinations.length > 0 ? (
+              filteredDestinations.map((destination) => (
+                <TouchableOpacity
+                  key={destination.id}
+                  style={styles.suggestionItem}
+                  onPress={() => {
+                    setSelectedDestination(destination.name);
+                    setSearchQuery(`${destination.name}, ${destination.country}`);
+                    setShowSuggestions(false);
+                  }}
+                >
+                  <Ionicons name="location" size={16} color="#6200ee" />
+                  <View style={styles.suggestionTextContainer}>
+                    <Text style={styles.suggestionName}>{destination.name}</Text>
+                    <Text style={styles.suggestionCountry}>{destination.country}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <Text style={styles.noResultsText}>No destinations found</Text>
+            )}
+          </View>
+        )}
+      </View>
+      
+      {selectedDestination && DESTINATION_DETAILS[selectedDestination as keyof typeof DESTINATION_DETAILS] && (
+        <View style={styles.destinationDetails}>
+          <Text style={styles.destinationName}>{selectedDestination}</Text>
+          <View style={styles.detailsGrid}>
+            <View style={styles.detailItem}>
+              <Ionicons name="sunny" size={20} color="#6200ee" />
+              <Text style={styles.detailLabel}>Weather</Text>
+              <Text style={styles.detailText}>
+                {DESTINATION_DETAILS[selectedDestination as keyof typeof DESTINATION_DETAILS].weather}
+              </Text>
+            </View>
+            <View style={styles.detailItem}>
+              <Ionicons name="card" size={20} color="#6200ee" />
+              <Text style={styles.detailLabel}>Visa</Text>
+              <Text style={styles.detailText}>
+                {DESTINATION_DETAILS[selectedDestination as keyof typeof DESTINATION_DETAILS].visa}
+              </Text>
+            </View>
+            <View style={styles.detailItem}>
+              <Ionicons name="cash" size={20} color="#6200ee" />
+              <Text style={styles.detailLabel}>Budget</Text>
+              <Text style={styles.detailText}>
+                {DESTINATION_DETAILS[selectedDestination as keyof typeof DESTINATION_DETAILS].budget}
+              </Text>
+            </View>
+            <View style={styles.detailItem}>
+              <Ionicons name="star" size={20} color="#6200ee" />
+              <Text style={styles.detailLabel}>Attractions</Text>
+              <Text style={styles.detailText}>
+                {DESTINATION_DETAILS[selectedDestination as keyof typeof DESTINATION_DETAILS].attractions}
+              </Text>
+            </View>
+          </View>
+          
+          <TouchableOpacity
+            style={styles.planTripButton}
+            onPress={planSpecificTrip}
+          >
+            <Text style={styles.planTripButtonText}>✨ Plan this Trip</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </Animated.View>
+  );
+  
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
@@ -111,52 +561,49 @@ const HomeScreen: React.FC = () => {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.heading}>WanderGenie</Text>
+          <View style={styles.brandContainer}>
+            <Ionicons name="compass" size={24} color="#6200ee" />
+            <Text style={styles.heading}>WanderGenie</Text>
+          </View>
+          <Text style={styles.greeting}>
+            Hi {user?.firstName || 'Traveler'}!
+          </Text>
+          <Text style={styles.subtitle}>Where to next?</Text>
         </View>
         <TouchableOpacity style={styles.profileButton}>
-          <Ionicons name="notifications-outline" size={24} color="#333" />
+          <Ionicons name="person" size={24} color="#6200ee" />
         </TouchableOpacity>
       </View>
       
-      {/* Search Input */}
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder={mode === 'smart' 
-            ? "Tell us your vibe, budget, duration…" 
-            : "Where do you want to go?"}
-          placeholderTextColor="#888"
-          value={input}
-          onChangeText={setInput}
-        />
-      </View>
-      
-      {/* Toggle Buttons */}
+      {/* Toggle Tabs */}
       <View style={styles.toggleContainer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[
-            styles.toggleButton, 
-            mode === 'smart' && styles.activeToggle
+            styles.toggleButton,
+            activeTab === 'smart' && styles.activeToggle
           ]}
-          onPress={() => setMode('smart')}
+          onPress={() => setActiveTab('smart')}
         >
           <Text style={[
             styles.toggleText,
-            mode === 'smart' && styles.activeToggleText
-          ]}>🎯 Smart Suggestion</Text>
+            activeTab === 'smart' && styles.activeToggleText
+          ]}>
+            Smart Suggestion
+          </Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[
-            styles.toggleButton, 
-            mode === 'specific' && styles.activeToggle
+            styles.toggleButton,
+            activeTab === 'specific' && styles.activeToggle
           ]}
-          onPress={() => setMode('specific')}
+          onPress={() => setActiveTab('specific')}
         >
           <Text style={[
             styles.toggleText,
-            mode === 'specific' && styles.activeToggleText
-          ]}>📍 Specific Location</Text>
+            activeTab === 'specific' && styles.activeToggleText
+          ]}>
+            Specific Location
+          </Text>
         </TouchableOpacity>
       </View>
       
@@ -169,94 +616,7 @@ const HomeScreen: React.FC = () => {
       >
         {/* Conditional Content based on mode */}
         <View style={styles.contentContainer}>
-          {mode === 'smart' ? (
-            <View style={styles.inputsContainer}>
-              <Text style={styles.sectionTitle}>Tell us about your dream trip:</Text>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Trip Type</Text>
-                <View style={styles.optionsRow}>
-                  <TouchableOpacity style={styles.option}>
-                    <Text>Solo</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.option}>
-                    <Text>Couple</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.option}>
-                    <Text>Family</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-              
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Vibe</Text>
-                <View style={styles.optionsRow}>
-                  <TouchableOpacity style={styles.option}>
-                    <Text>Adventure</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.option}>
-                    <Text>Relax</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.option}>
-                    <Text>Culture</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-              
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Budget</Text>
-                <View style={styles.optionsRow}>
-                  <TouchableOpacity style={styles.option}>
-                    <Text>Budget</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.option}>
-                    <Text>Mid-range</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.option}>
-                    <Text>Luxury</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-              
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Duration</Text>
-                <View style={styles.optionsRow}>
-                  <TouchableOpacity style={styles.option}>
-                    <Text>Weekend</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.option}>
-                    <Text>1 Week</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.option}>
-                    <Text>2+ Weeks</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          ) : (
-            <View style={styles.locationContainer}>
-              <Text style={styles.sectionTitle}>Find your perfect destination:</Text>
-              <View style={styles.budgetTiers}>
-                <TouchableOpacity style={styles.budgetTier}>
-                  <Text style={styles.budgetTitle}>Budget</Text>
-                  <Text style={styles.budgetDesc}>Affordable options with great value</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity style={styles.budgetTier}>
-                  <Text style={styles.budgetTitle}>Mid-Range</Text>
-                  <Text style={styles.budgetDesc}>Balance of comfort and affordability</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity style={styles.budgetTier}>
-                  <Text style={styles.budgetTitle}>Luxury</Text>
-                  <Text style={styles.budgetDesc}>Premium experiences and accommodations</Text>
-                </TouchableOpacity>
-              </View>
-              
-              <TouchableOpacity style={styles.ctaButton}>
-                <Text style={styles.ctaText}>Find Destinations</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          {activeTab === 'smart' ? renderSmartSuggestionForm() : renderSpecificLocationSearch()}
         </View>
         
         {/* AI Trip Planner */}
@@ -379,21 +739,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 10,
+    paddingTop: 15,
     paddingBottom: 15,
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    padding: 20,
-    paddingTop: 0,
+  brandContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
   },
   heading: {
-    fontSize: 32,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#6200ee',
+    marginLeft: 6,
   },
   greeting: {
     fontSize: 24,
@@ -413,21 +771,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  searchContainer: {
-    marginHorizontal: 20,
-    marginBottom: 20,
+  scrollView: {
+    flex: 1,
   },
-  searchInput: {
-    backgroundColor: '#f5f5f5',
-    padding: 15,
-    borderRadius: 10,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+  scrollContent: {
+    flexGrow: 1,
+    padding: 20,
+    paddingTop: 0,
   },
   toggleContainer: {
     flexDirection: 'row',
-    marginHorizontal: 20,
     marginBottom: 20,
     borderRadius: 8,
     overflow: 'hidden',
@@ -451,8 +804,266 @@ const styles = StyleSheet.create({
     color: '#0077cc',
     fontWeight: 'bold',
   },
-  aiPlannerSection: {
-    marginBottom: 25,
+  formContainer: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 24,
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  progressStepWrapper: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    flex: 1,
+    position: 'relative',
+  },
+  progressStep: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  activeProgressStep: {
+    backgroundColor: '#6200ee',
+  },
+  progressStepNumber: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#999',
+  },
+  activeProgressStepNumber: {
+    color: '#fff',
+  },
+  progressStepText: {
+    fontSize: 10,
+    color: '#999',
+    textAlign: 'center',
+  },
+  activeProgressStepText: {
+    color: '#6200ee',
+    fontWeight: 'bold',
+  },
+  progressLine: {
+    position: 'absolute',
+    top: 14,
+    right: '50%',
+    left: '50%',
+    height: 2,
+    backgroundColor: '#f0f0f0',
+    zIndex: -1,
+  },
+  activeProgressLine: {
+    backgroundColor: '#6200ee',
+  },
+  stepContent: {
+    marginBottom: 20,
+  },
+  stepTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    color: '#333',
+  },
+  selectionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  selectionCard: {
+    width: '48%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  selectedCard: {
+    backgroundColor: '#6200ee',
+  },
+  selectionCardText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+  },
+  selectedCardText: {
+    color: '#fff',
+  },
+  checkmarkContainer: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  navigationButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+  },
+  backButtonText: {
+    color: '#6200ee',
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+  nextButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#6200ee',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  nextButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    marginRight: 4,
+  },
+  generateButton: {
+    backgroundColor: '#6200ee',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignSelf: 'center',
+  },
+  generateButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  searchContainer: {
+    marginBottom: 16,
+  },
+  searchLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#333',
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    padding: 12,
+    fontSize: 16,
+  },
+  clearButton: {
+    padding: 4,
+  },
+  suggestionsContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#eee',
+    maxHeight: 200,
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  suggestionTextContainer: {
+    marginLeft: 8,
+  },
+  suggestionName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+  },
+  suggestionCountry: {
+    fontSize: 12,
+    color: '#666',
+  },
+  noResultsText: {
+    padding: 12,
+    textAlign: 'center',
+    color: '#999',
+  },
+  destinationDetails: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  destinationName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    color: '#333',
+    textAlign: 'center',
+  },
+  detailsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  detailItem: {
+    width: '48%',
+    marginBottom: 16,
+    alignItems: 'flex-start',
+  },
+  detailLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 4,
+    marginBottom: 2,
+  },
+  detailText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  planTripButton: {
+    backgroundColor: '#6200ee',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  planTripButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   section: {
     marginBottom: 25,
@@ -519,92 +1130,35 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  destinationName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-  },
   destinationCountry: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#666',
   },
   recentSearches: {
     backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    padding: 15,
+    borderRadius: 12,
+    padding: 12,
   },
   recentSearchItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
   recentSearchText: {
-    marginLeft: 10,
-    fontSize: 16,
+    marginLeft: 8,
+    fontSize: 14,
     color: '#333',
   },
   bottomSpacing: {
-    height: 30,
+    height: 40,
   },
   contentContainer: {
     marginBottom: 25,
   },
-  inputsContainer: {
-    width: '100%',
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 16,
-    marginBottom: 10,
-    color: '#444',
-    fontWeight: '500',
-  },
-  optionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  option: {
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    alignItems: 'center',
-    width: '30%',
-  },
-  locationContainer: {
-    width: '100%',
-  },
-  budgetTiers: {
+  aiPlannerSection: {
     marginBottom: 25,
-  },
-  budgetTier: {
-    padding: 15,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    marginBottom: 10,
-  },
-  budgetTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 5,
-    color: '#0077cc',
-  },
-  budgetDesc: {
-    color: '#666',
-  },
-  ctaButton: {
-    backgroundColor: '#6200ee',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  ctaText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
   },
 });
 
