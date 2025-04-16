@@ -26,6 +26,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.0.1",
     "nodemailer": "^6.9.7",
+    "openai": "^4.94.0",
     "react-native-toast-message": "^2.2.1"
   },
   "devDependencies": {
