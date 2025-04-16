@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   FlatList,
@@ -25,6 +24,7 @@ import { AppDispatch } from '../store';
 import { fetchTrips, deleteTrip, Trip } from '../store/slices/tripsSlice';
 import { useAppSelector } from '../hooks/reduxHooks';
 import TripCard from '../components/TripCard';
+import AppText from '../components/AppText';
 
 // Get screen dimensions
 const { width, height } = Dimensions.get('window');
@@ -314,45 +314,45 @@ const SavedTripsScreen: React.FC = () => {
               styles.statusBadge, 
               tripStatus === 'draft' ? styles.draftBadge : styles.plannedBadge
             ]}>
-              <Text style={styles.statusText}>
+              <AppText style={styles.statusText}>
                 {tripStatus === 'draft' ? 'Draft' : 'Planned'}
-              </Text>
+              </AppText>
             </View>
           </View>
           
           <View style={styles.tripContent}>
-            <Text style={styles.tripTitle}>{item.title}</Text>
-            <Text style={styles.destination}>{item.destination}</Text>
+            <AppText style={styles.tripTitle}>{item.title}</AppText>
+            <AppText style={styles.destination}>{item.destination}</AppText>
             
             <View style={styles.metadata}>
               <View style={styles.metadataItem}>
                 <Ionicons name="calendar-outline" size={14} color="#666" />
-                <Text style={styles.metadataText}>
+                <AppText style={styles.metadataText}>
                   {formatDate(item.startDate)}
                   {item.endDate && ` - ${formatDate(item.endDate)}`}
-                </Text>
+                </AppText>
               </View>
               
               <View style={styles.metadataItem}>
                 <Ionicons name="time-outline" size={14} color="#666" />
-                <Text style={styles.metadataText}>
+                <AppText style={styles.metadataText}>
                   {item.days.length} {item.days.length === 1 ? 'day' : 'days'}
-                </Text>
+                </AppText>
               </View>
               
               <View style={styles.metadataItem}>
                 <Ionicons name="cash-outline" size={14} color="#666" />
-                <Text style={styles.metadataText}>
+                <AppText style={styles.metadataText}>
                   {item.budget ? `${item.budget.currency} ${item.budget.amount}` : 'Not specified'}
-                </Text>
+                </AppText>
               </View>
             </View>
             
             {!item.isDraft && isUpcoming(item.startDate) && (
               <View style={styles.upcomingBadge}>
-                <Text style={styles.upcomingText}>
+                <AppText style={styles.upcomingText}>
                   {getDaysRemaining(item.startDate)} to go
-                </Text>
+                </AppText>
               </View>
             )}
           </View>
@@ -391,15 +391,15 @@ const SavedTripsScreen: React.FC = () => {
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
       <Ionicons name="planet-outline" size={80} color="#ddd" />
-      <Text style={styles.emptyStateTitle}>No saved trips yet</Text>
-      <Text style={styles.emptyStateText}>
+      <AppText style={styles.emptyStateTitle}>No saved trips yet</AppText>
+      <AppText style={styles.emptyStateText}>
         You haven't saved any trips yet. Start your first one now!
-      </Text>
+      </AppText>
       <TouchableOpacity 
         style={styles.emptyStateButton}
         onPress={() => navigation.navigate('AITripPlannerScreen')}
       >
-        <Text style={styles.emptyStateButtonText}>Plan New Trip</Text>
+        <AppText style={styles.emptyStateButtonText}>Plan New Trip</AppText>
       </TouchableOpacity>
     </View>
   );
@@ -407,7 +407,7 @@ const SavedTripsScreen: React.FC = () => {
   // Render group header
   const renderGroupHeader = (title: string) => (
     <View style={styles.groupHeader}>
-      <Text style={styles.groupTitle}>{title}</Text>
+      <AppText style={styles.groupTitle}>{title}</AppText>
     </View>
   );
   
@@ -421,13 +421,13 @@ const SavedTripsScreen: React.FC = () => {
     >
       <View style={styles.filterSheetHandle} />
       
-      <Text style={styles.filterTitle}>Filter & Sort</Text>
+      <AppText style={styles.filterTitle}>Filter & Sort</AppText>
       
       <View style={styles.filterSection}>
-        <Text style={styles.filterSectionTitle}>Filter By</Text>
+        <AppText style={styles.filterSectionTitle}>Filter By</AppText>
         
         <View style={styles.filterRow}>
-          <Text style={styles.filterLabel}>Destination Type</Text>
+          <AppText style={styles.filterLabel}>Destination Type</AppText>
           {/* Destination type filter UI - simplified for this example */}
           <View style={styles.filterChips}>
             <TouchableOpacity 
@@ -440,10 +440,10 @@ const SavedTripsScreen: React.FC = () => {
                 destinationType: filterOptions.destinationType === 'Beach' ? null : 'Beach'
               })}
             >
-              <Text style={[
+              <AppText style={[
                 styles.filterChipText,
                 filterOptions.destinationType === 'Beach' && styles.activeFilterChipText
-              ]}>Beach</Text>
+              ]}>Beach</AppText>
             </TouchableOpacity>
             
             <TouchableOpacity 
@@ -456,10 +456,10 @@ const SavedTripsScreen: React.FC = () => {
                 destinationType: filterOptions.destinationType === 'City' ? null : 'City'
               })}
             >
-              <Text style={[
+              <AppText style={[
                 styles.filterChipText,
                 filterOptions.destinationType === 'City' && styles.activeFilterChipText
-              ]}>City</Text>
+              ]}>City</AppText>
             </TouchableOpacity>
             
             <TouchableOpacity 
@@ -472,16 +472,16 @@ const SavedTripsScreen: React.FC = () => {
                 destinationType: filterOptions.destinationType === 'Mountain' ? null : 'Mountain'
               })}
             >
-              <Text style={[
+              <AppText style={[
                 styles.filterChipText,
                 filterOptions.destinationType === 'Mountain' && styles.activeFilterChipText
-              ]}>Mountain</Text>
+              ]}>Mountain</AppText>
             </TouchableOpacity>
           </View>
         </View>
         
         <View style={styles.filterRow}>
-          <Text style={styles.filterLabel}>Status</Text>
+          <AppText style={styles.filterLabel}>Status</AppText>
           <View style={styles.filterChips}>
             <TouchableOpacity 
               style={[
@@ -493,10 +493,10 @@ const SavedTripsScreen: React.FC = () => {
                 status: filterOptions.status === 'draft' ? 'all' : 'draft'
               })}
             >
-              <Text style={[
+              <AppText style={[
                 styles.filterChipText,
                 filterOptions.status === 'draft' && styles.activeFilterChipText
-              ]}>Draft</Text>
+              ]}>Draft</AppText>
             </TouchableOpacity>
             
             <TouchableOpacity 
@@ -509,17 +509,17 @@ const SavedTripsScreen: React.FC = () => {
                 status: filterOptions.status === 'planned' ? 'all' : 'planned'
               })}
             >
-              <Text style={[
+              <AppText style={[
                 styles.filterChipText,
                 filterOptions.status === 'planned' && styles.activeFilterChipText
-              ]}>Planned</Text>
+              ]}>Planned</AppText>
             </TouchableOpacity>
           </View>
         </View>
       </View>
       
       <View style={styles.filterSection}>
-        <Text style={styles.filterSectionTitle}>Sort By</Text>
+        <AppText style={styles.filterSectionTitle}>Sort By</AppText>
         
         <View style={styles.sortOptions}>
           <TouchableOpacity 
@@ -530,10 +530,10 @@ const SavedTripsScreen: React.FC = () => {
               sortOrder: filterOptions.sortBy === 'alphabetical' && filterOptions.sortOrder === 'asc' ? 'desc' : 'asc'
             })}
           >
-            <Text style={[
+            <AppText style={[
               styles.sortOptionText,
               filterOptions.sortBy === 'alphabetical' && styles.activeSortOptionText
-            ]}>A-Z</Text>
+            ]}>A-Z</AppText>
             {filterOptions.sortBy === 'alphabetical' && (
               <Ionicons 
                 name={filterOptions.sortOrder === 'asc' ? 'arrow-up' : 'arrow-down'} 
@@ -551,10 +551,10 @@ const SavedTripsScreen: React.FC = () => {
               sortOrder: filterOptions.sortBy === 'dateCreated' && filterOptions.sortOrder === 'desc' ? 'asc' : 'desc'
             })}
           >
-            <Text style={[
+            <AppText style={[
               styles.sortOptionText,
               filterOptions.sortBy === 'dateCreated' && styles.activeSortOptionText
-            ]}>Date Created</Text>
+            ]}>Date Created</AppText>
             {filterOptions.sortBy === 'dateCreated' && (
               <Ionicons 
                 name={filterOptions.sortOrder === 'asc' ? 'arrow-up' : 'arrow-down'} 
@@ -572,10 +572,10 @@ const SavedTripsScreen: React.FC = () => {
               sortOrder: filterOptions.sortBy === 'budget' && filterOptions.sortOrder === 'asc' ? 'desc' : 'asc'
             })}
           >
-            <Text style={[
+            <AppText style={[
               styles.sortOptionText,
               filterOptions.sortBy === 'budget' && styles.activeSortOptionText
-            ]}>Budget</Text>
+            ]}>Budget</AppText>
             {filterOptions.sortBy === 'budget' && (
               <Ionicons 
                 name={filterOptions.sortOrder === 'asc' ? 'arrow-up' : 'arrow-down'} 
@@ -592,14 +592,14 @@ const SavedTripsScreen: React.FC = () => {
           style={styles.resetButton}
           onPress={resetFilters}
         >
-          <Text style={styles.resetButtonText}>Reset</Text>
+          <AppText style={styles.resetButtonText}>Reset</AppText>
         </TouchableOpacity>
         
         <TouchableOpacity 
           style={styles.applyButton}
           onPress={applyFilters}
         >
-          <Text style={styles.applyButtonText}>Apply</Text>
+          <AppText style={styles.applyButtonText}>Apply</AppText>
         </TouchableOpacity>
       </View>
     </Animated.View>
@@ -659,7 +659,7 @@ const SavedTripsScreen: React.FC = () => {
                   <Ionicons name={item.icon as any} size={20} color="#fff" />
                 </TouchableOpacity>
                 <View style={styles.fabMenuItemLabel}>
-                  <Text style={styles.fabMenuItemText}>{item.label}</Text>
+                  <AppText style={styles.fabMenuItemText}>{item.label}</AppText>
                 </View>
               </Animated.View>
             ))}
@@ -686,7 +686,7 @@ const SavedTripsScreen: React.FC = () => {
       
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>My Trips</Text>
+        <AppText style={styles.title}>My Trips</AppText>
         <TouchableOpacity 
           style={styles.filterButton}
           onPress={toggleFilterSheet}
@@ -706,12 +706,12 @@ const SavedTripsScreen: React.FC = () => {
             ]}
             onPress={() => setActiveTab(tab.id)}
           >
-            <Text style={[
+            <AppText style={[
               styles.tabText,
               activeTab === tab.id && styles.activeTabText
             ]}>
               {tab.label}
-            </Text>
+            </AppText>
           </TouchableOpacity>
         ))}
       </View>
@@ -720,7 +720,7 @@ const SavedTripsScreen: React.FC = () => {
       {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#6200ee" />
-          <Text style={styles.loadingText}>Loading your trips...</Text>
+          <AppText style={styles.loadingText}>Loading your trips...</AppText>
         </View>
       ) : (
         getFilteredTrips().length === 0 ? (
@@ -1144,4 +1144,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SavedTripsScreen; 
+export default SavedTripsScreen;

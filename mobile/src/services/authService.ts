@@ -172,11 +172,41 @@ export const getStoredUser = async (): Promise<User | null> => {
   }
 };
 
+/**
+ * Sends a forgot password email to the user.
+ * @param {string} email - The user's email address.
+ */
+export const sendForgotPasswordEmail = async (email: string) => {
+  try {
+    const response = await axios.post(`${API_URL}/forgot-password`, { email });
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || 'Failed to send reset link.');
+  }
+};
+
+/**
+ * Resets the user's password.
+ * @param {Object} params - The reset parameters.
+ * @param {string} params.token - The reset token.
+ * @param {string} params.newPassword - The new password.
+ */
+export const resetPassword = async ({ token, newPassword }: { token: string; newPassword: string }) => {
+  try {
+    const response = await axios.post(`${API_URL}/reset-password`, { token, newPassword });
+    return response.data;
+  } catch (error) {
+    throw new Error((error as any).response?.data?.message || 'Failed to reset password.');
+  }
+};
+
 export default {
   login,
   register,
   getProfile,
   logout,
   isAuthenticated,
-  getStoredUser
-}; 
+  getStoredUser,
+  sendForgotPasswordEmail,
+  resetPassword
+};

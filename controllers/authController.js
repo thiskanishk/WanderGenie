@@ -3,6 +3,7 @@ const { generateTokens } = require('../utils/generateToken');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
+const sendEmail = require('../utils/sendEmail'); // Mock or real email utility
 
 /**
  * @desc    Register a new user
@@ -230,42 +231,31 @@ const forgotPassword = async (req, res) => {
     }
 
     // Generate reset token
-    const resetToken = crypto.randomBytes(20).toString('hex');
+    const resetToken = crypto.randomBytes(32).toString('hex');
 
     // Hash token and save to database
-    user.resetPasswordToken = crypto
+    user.resetTokenHash = crypto
       .createHash('sha256')
       .update(resetToken)
       .digest('hex');
-    
-    // Set expiry (10 minutes)
-    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
-    
+
+    // Set expiry (15 minutes)
+    user.resetTokenExpires = Date.now() + 15 * 60 * 1000;
+
     await user.save();
 
     // Create reset URL
     const resetUrl = `${req.protocol}://${req.get('host')}/reset-password/${resetToken}`;
 
-    // In a production app, you would send an email here
-    // For this implementation, we'll just log it
-    console.log(`Password reset token generated for ${email}`);
-    console.log(`Reset URL: ${resetUrl}`);
+    // Send email (mocked for now)
+    await sendEmail(user.email, 'Password Reset Request', `Reset your password here: ${resetUrl}`);
 
     res.json({
       success: true,
-      message: 'Password reset email sent',
-      data: { resetUrl }  // Normally wouldn't return this in production
+      message: 'Password reset email sent'
     });
   } catch (error) {
     console.error('Forgot password error:', error);
-    
-    // If there's an error, clear the reset token fields
-    if (user) {
-      user.resetPasswordToken = undefined;
-      user.resetPasswordExpire = undefined;
-      await user.save();
-    }
-
     res.status(500).json({
       success: false,
       message: 'Server error during password reset request',
@@ -281,18 +271,18 @@ const forgotPassword = async (req, res) => {
  */
 const resetPassword = async (req, res) => {
   try {
-    const { resetToken, newPassword } = req.body;
+    const { token, newPassword } = req.body;
 
     // Hash token to match hashed token in database
     const hashedToken = crypto
       .createHash('sha256')
-      .update(resetToken)
+      .update(token)
       .digest('hex');
 
     // Find user with valid reset token and expiry
     const user = await User.findOne({
-      resetPasswordToken: hashedToken,
-      resetPasswordExpire: { $gt: Date.now() }
+      resetTokenHash: hashedToken,
+      resetTokenExpires: { $gt: Date.now() }
     });
 
     if (!user) {
@@ -304,9 +294,9 @@ const resetPassword = async (req, res) => {
 
     // Set new password and clear reset token fields
     user.password = newPassword;
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpire = undefined;
-    
+    user.resetTokenHash = undefined;
+    user.resetTokenExpires = undefined;
+
     await user.save();
 
     res.json({
@@ -414,4 +404,4 @@ module.exports = {
   resetPassword,
   getMe,
   refreshToken
-}; 
+};

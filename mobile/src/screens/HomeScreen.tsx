@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
@@ -31,6 +30,7 @@ import BigActionButton from '../components/BigActionButton';
 import { HomeStackParamList } from '../navigation/AppNavigator';
 import WelcomeHeader from '../components/WelcomeHeader';
 import { useAuth } from '../contexts/AuthContext';
+import AppText from '../components/AppText';
 
 // Define types
 type HomeScreenNavigationProp = NativeStackNavigationProp<HomeStackParamList, 'Home'>;
@@ -131,7 +131,7 @@ type RootStackParamList = {
 };
 
 const HomeScreen: React.FC = () => {
-  const navigation = useNavigation<HomeScreenNavigationProp>();
+  const navigation = useNavigation();
   const dispatch = useDispatch<AppThunkDispatch>();
   const { logout } = useAuth();
   const [refreshing, setRefreshing] = useState<boolean>(false);
@@ -411,9 +411,9 @@ const HomeScreen: React.FC = () => {
       style={[styles.selectionCard, isSelected && styles.selectedCard]}
       onPress={onSelect}
     >
-      <Text style={[styles.selectionCardText, isSelected && styles.selectedCardText]}>
+      <AppText style={[styles.selectionCardText, isSelected && styles.selectedCardText]}>
         {title}
-      </Text>
+      </AppText>
       {isSelected && (
         <View style={styles.checkmarkContainer}>
           <Ionicons name="checkmark-circle" size={18} color="#fff" />
@@ -434,20 +434,20 @@ const HomeScreen: React.FC = () => {
               index + 1 === currentStep && styles.currentProgressStep
             ]}
           >
-            <Text style={[
+            <AppText style={[
               styles.progressStepNumber, 
               index + 1 <= currentStep && styles.activeProgressStepNumber
             ]}>
               {index + 1}
-            </Text>
+            </AppText>
           </View>
-          <Text style={[
+          <AppText style={[
             styles.progressStepText,
             index + 1 <= currentStep && styles.activeProgressStepText,
             index + 1 === currentStep && styles.currentProgressStepText
           ]}>
             {step}
-          </Text>
+          </AppText>
           {index < 3 && (
             <View style={[
               styles.progressLine,
@@ -473,7 +473,7 @@ const HomeScreen: React.FC = () => {
       <View style={styles.stepContent}>
         {currentStep === 1 && (
           <>
-            <Text style={styles.stepTitle}>What type of trip are you looking for?</Text>
+            <AppText style={styles.stepTitle}>What type of trip are you looking for?</AppText>
             <View style={styles.selectionGrid}>
               {(['Beach', 'City', 'Mountain', 'Cultural', 'Adventure'] as TripType[]).map((type) => (
                 <SelectionCard
@@ -489,7 +489,7 @@ const HomeScreen: React.FC = () => {
         
         {currentStep === 2 && (
           <>
-            <Text style={styles.stepTitle}>What vibe are you going for?</Text>
+            <AppText style={styles.stepTitle}>What vibe are you going for?</AppText>
             <View style={styles.selectionGrid}>
               {(['Relaxing', 'Party', 'Family', 'Romantic', 'Solo'] as TripVibe[]).map((vibe) => (
                 <SelectionCard
@@ -505,7 +505,7 @@ const HomeScreen: React.FC = () => {
         
         {currentStep === 3 && (
           <>
-            <Text style={styles.stepTitle}>What's your budget?</Text>
+            <AppText style={styles.stepTitle}>What's your budget?</AppText>
             <View style={styles.selectionGrid}>
               {(['Budget', 'Mid-Range', 'Luxury'] as TripBudget[]).map((budget) => (
                 <SelectionCard
@@ -521,7 +521,7 @@ const HomeScreen: React.FC = () => {
         
         {currentStep === 4 && (
           <>
-            <Text style={styles.stepTitle}>How long will your trip be?</Text>
+            <AppText style={styles.stepTitle}>How long will your trip be?</AppText>
             <View style={styles.selectionGrid}>
               {(['1-3 Days', '4-7 Days', '1-2 Weeks', '2+ Weeks'] as TripDuration[]).map((duration) => (
                 <SelectionCard
@@ -543,7 +543,7 @@ const HomeScreen: React.FC = () => {
             onPress={goToPreviousStep}
           >
             <Ionicons name="arrow-back" size={20} color="#6200ee" />
-            <Text style={styles.backButtonText}>Back</Text>
+            <AppText style={styles.backButtonText}>Back</AppText>
           </TouchableOpacity>
         )}
         
@@ -564,14 +564,14 @@ const HomeScreen: React.FC = () => {
               (currentStep === 3 && !selectedBudget)
             }
           >
-            <Text style={styles.nextButtonText}>Next</Text>
+            <AppText style={styles.nextButtonText}>Next</AppText>
             <Ionicons name="arrow-forward" size={20} color="#fff" />
           </TouchableOpacity>
         ) : (
           isGeneratingPlan ? (
             <View style={styles.generateButton}>
               <ActivityIndicator color="#fff" size="small" style={{marginRight: 8}} />
-              <Text style={styles.generateButtonText}>Generating Trip...</Text>
+              <AppText style={styles.generateButtonText}>Generating Trip...</AppText>
             </View>
           ) : (
             <TouchableOpacity
@@ -582,7 +582,7 @@ const HomeScreen: React.FC = () => {
               onPress={handleGeneratePlan}
               disabled={!selectedDuration}
             >
-              <Text style={styles.generateButtonText}>✨ Generate Smart Plan</Text>
+              <AppText style={styles.generateButtonText}>✨ Generate Smart Plan</AppText>
             </TouchableOpacity>
           )
         )}
@@ -591,27 +591,27 @@ const HomeScreen: React.FC = () => {
       {/* Journey summary when all selections are made */}
       {selectedTripType && selectedVibe && selectedBudget && selectedDuration && (
         <View style={styles.summaryContainer}>
-          <Text style={styles.summaryTitle}>Your Journey Preferences</Text>
+          <AppText style={styles.summaryTitle}>Your Journey Preferences</AppText>
           <View style={styles.summaryGrid}>
             <View style={styles.summaryItem}>
               <Ionicons name="map-outline" size={16} color="#6200ee" />
-              <Text style={styles.summaryLabel}>Trip Type</Text>
-              <Text style={styles.summaryValue}>{selectedTripType}</Text>
+              <AppText style={styles.summaryLabel}>Trip Type</AppText>
+              <AppText style={styles.summaryValue}>{selectedTripType}</AppText>
             </View>
             <View style={styles.summaryItem}>
               <Ionicons name="heart-outline" size={16} color="#6200ee" />
-              <Text style={styles.summaryLabel}>Vibe</Text>
-              <Text style={styles.summaryValue}>{selectedVibe}</Text>
+              <AppText style={styles.summaryLabel}>Vibe</AppText>
+              <AppText style={styles.summaryValue}>{selectedVibe}</AppText>
             </View>
             <View style={styles.summaryItem}>
               <Ionicons name="cash-outline" size={16} color="#6200ee" />
-              <Text style={styles.summaryLabel}>Budget</Text>
-              <Text style={styles.summaryValue}>{selectedBudget}</Text>
+              <AppText style={styles.summaryLabel}>Budget</AppText>
+              <AppText style={styles.summaryValue}>{selectedBudget}</AppText>
             </View>
             <View style={styles.summaryItem}>
               <Ionicons name="time-outline" size={16} color="#6200ee" />
-              <Text style={styles.summaryLabel}>Duration</Text>
-              <Text style={styles.summaryValue}>{selectedDuration}</Text>
+              <AppText style={styles.summaryLabel}>Duration</AppText>
+              <AppText style={styles.summaryValue}>{selectedDuration}</AppText>
             </View>
           </View>
         </View>
@@ -629,7 +629,7 @@ const HomeScreen: React.FC = () => {
       }
     ]}>
       <View style={styles.searchContainer}>
-        <Text style={styles.searchLabel}>Search for a destination</Text>
+        <AppText style={styles.searchLabel}>Search for a destination</AppText>
         <View style={styles.searchInputContainer}>
           <Ionicons name="search" size={20} color="#6200ee" style={styles.searchIcon} />
           <TextInput
@@ -671,13 +671,13 @@ const HomeScreen: React.FC = () => {
                 >
                   <Ionicons name="location" size={16} color="#6200ee" />
                   <View style={styles.suggestionTextContainer}>
-                    <Text style={styles.suggestionName}>{destination.name}</Text>
-                    <Text style={styles.suggestionCountry}>{destination.country}</Text>
+                    <AppText style={styles.suggestionName}>{destination.name}</AppText>
+                    <AppText style={styles.suggestionCountry}>{destination.country}</AppText>
                   </View>
                 </TouchableOpacity>
               ))
             ) : (
-              <Text style={styles.noResultsText}>No destinations found</Text>
+              <AppText style={styles.noResultsText}>No destinations found</AppText>
             )}
           </View>
         )}
@@ -685,35 +685,35 @@ const HomeScreen: React.FC = () => {
       
       {selectedDestination && DESTINATION_DETAILS[selectedDestination as keyof typeof DESTINATION_DETAILS] && (
         <View style={styles.destinationDetails}>
-          <Text style={styles.destinationName}>{selectedDestination}</Text>
+          <AppText style={styles.destinationName}>{selectedDestination}</AppText>
           <View style={styles.detailsGrid}>
             <View style={styles.detailItem}>
               <Ionicons name="sunny" size={20} color="#6200ee" />
-              <Text style={styles.detailLabel}>Weather</Text>
-              <Text style={styles.detailText}>
+              <AppText style={styles.detailLabel}>Weather</AppText>
+              <AppText style={styles.detailText}>
                 {DESTINATION_DETAILS[selectedDestination as keyof typeof DESTINATION_DETAILS].weather}
-              </Text>
+              </AppText>
             </View>
             <View style={styles.detailItem}>
               <Ionicons name="card" size={20} color="#6200ee" />
-              <Text style={styles.detailLabel}>Visa</Text>
-              <Text style={styles.detailText}>
+              <AppText style={styles.detailLabel}>Visa</AppText>
+              <AppText style={styles.detailText}>
                 {DESTINATION_DETAILS[selectedDestination as keyof typeof DESTINATION_DETAILS].visa}
-              </Text>
+              </AppText>
             </View>
             <View style={styles.detailItem}>
               <Ionicons name="cash" size={20} color="#6200ee" />
-              <Text style={styles.detailLabel}>Budget</Text>
-              <Text style={styles.detailText}>
+              <AppText style={styles.detailLabel}>Budget</AppText>
+              <AppText style={styles.detailText}>
                 {DESTINATION_DETAILS[selectedDestination as keyof typeof DESTINATION_DETAILS].budget}
-              </Text>
+              </AppText>
             </View>
             <View style={styles.detailItem}>
               <Ionicons name="star" size={20} color="#6200ee" />
-              <Text style={styles.detailLabel}>Attractions</Text>
-              <Text style={styles.detailText}>
+              <AppText style={styles.detailLabel}>Attractions</AppText>
+              <AppText style={styles.detailText}>
                 {DESTINATION_DETAILS[selectedDestination as keyof typeof DESTINATION_DETAILS].attractions}
-              </Text>
+              </AppText>
             </View>
           </View>
           
@@ -721,7 +721,7 @@ const HomeScreen: React.FC = () => {
             style={styles.planTripButton}
             onPress={planSpecificTrip}
           >
-            <Text style={styles.planTripButtonText}>✨ Plan this Trip</Text>
+            <AppText style={styles.planTripButtonText}>✨ Plan this Trip</AppText>
           </TouchableOpacity>
         </View>
       )}
@@ -748,7 +748,7 @@ const HomeScreen: React.FC = () => {
         <View>
           <View style={styles.brandContainer}>
             <Ionicons name="compass" size={24} color="#6200ee" />
-            <Text style={styles.heading}>WanderGenie</Text>
+            <AppText style={styles.heading}>WanderGenie</AppText>
           </View>
           <WelcomeHeader />
         </View>
@@ -766,12 +766,12 @@ const HomeScreen: React.FC = () => {
           ]}
           onPress={() => setActiveTab('smart')}
         >
-          <Text style={[
+          <AppText style={[
             styles.toggleText,
             activeTab === 'smart' && styles.activeToggleText
           ]}>
             Smart Suggestion
-          </Text>
+          </AppText>
         </TouchableOpacity>
         <TouchableOpacity
           style={[
@@ -780,12 +780,12 @@ const HomeScreen: React.FC = () => {
           ]}
           onPress={() => setActiveTab('specific')}
         >
-          <Text style={[
+          <AppText style={[
             styles.toggleText,
             activeTab === 'specific' && styles.activeToggleText
           ]}>
             Specific Location
-          </Text>
+          </AppText>
         </TouchableOpacity>
       </View>
       
@@ -816,16 +816,16 @@ const HomeScreen: React.FC = () => {
             style={styles.testButton}
             onPress={navigateToAIPlanner}
           >
-            <Text style={styles.testButtonText}>Start Planning</Text>
+            <AppText style={styles.testButtonText}>Start Planning</AppText>
           </TouchableOpacity>
         </View>
         
         {/* Upcoming Trips */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Upcoming Trips</Text>
+            <AppText style={styles.sectionTitle}>Upcoming Trips</AppText>
             <TouchableOpacity onPress={() => navigation.navigate('SavedTrips')}>
-              <Text style={styles.seeAllText}>See All</Text>
+              <AppText style={styles.seeAllText}>See All</AppText>
             </TouchableOpacity>
           </View>
           
@@ -849,12 +849,12 @@ const HomeScreen: React.FC = () => {
           ) : (
             <View style={styles.emptyState}>
               <Ionicons name="airplane-outline" size={40} color="#ccc" />
-              <Text style={styles.emptyStateText}>No upcoming trips</Text>
+              <AppText style={styles.emptyStateText}>No upcoming trips</AppText>
               <TouchableOpacity 
                 style={styles.createButton}
                 onPress={navigateToAIPlanner}
               >
-                <Text style={styles.createButtonText}>Plan a Trip</Text>
+                <AppText style={styles.createButtonText}>Plan a Trip</AppText>
               </TouchableOpacity>
             </View>
           )}
@@ -863,9 +863,9 @@ const HomeScreen: React.FC = () => {
         {/* Featured Destinations */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Featured Destinations</Text>
+            <AppText style={styles.sectionTitle}>Featured Destinations</AppText>
             <TouchableOpacity>
-              <Text style={styles.seeAllText}>Explore</Text>
+              <AppText style={styles.seeAllText}>Explore</AppText>
             </TouchableOpacity>
           </View>
           
@@ -882,8 +882,8 @@ const HomeScreen: React.FC = () => {
                     resizeMode="contain"
                   />
                 </View>
-                <Text style={styles.destinationName}>{item.name}</Text>
-                <Text style={styles.destinationCountry}>{item.country}</Text>
+                <AppText style={styles.destinationName}>{item.name}</AppText>
+                <AppText style={styles.destinationCountry}>{item.country}</AppText>
               </TouchableOpacity>
             )}
             keyExtractor={(item: FeaturedDestination) => item.id}
@@ -894,20 +894,20 @@ const HomeScreen: React.FC = () => {
         {/* Recent Searches/History */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Searches</Text>
+            <AppText style={styles.sectionTitle}>Recent Searches</AppText>
             <TouchableOpacity>
-              <Text style={styles.seeAllText}>Clear</Text>
+              <AppText style={styles.seeAllText}>Clear</AppText>
             </TouchableOpacity>
           </View>
           
           <View style={styles.recentSearches}>
             <TouchableOpacity style={styles.recentSearchItem}>
               <Ionicons name="time-outline" size={16} color="#6200ee" />
-              <Text style={styles.recentSearchText}>Barcelona, Spain</Text>
+              <AppText style={styles.recentSearchText}>Barcelona, Spain</AppText>
             </TouchableOpacity>
             <TouchableOpacity style={styles.recentSearchItem}>
               <Ionicons name="time-outline" size={16} color="#6200ee" />
-              <Text style={styles.recentSearchText}>Bali, Indonesia</Text>
+              <AppText style={styles.recentSearchText}>Bali, Indonesia</AppText>
             </TouchableOpacity>
           </View>
         </View>
@@ -1414,4 +1414,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default HomeScreen; 
+export default HomeScreen;

@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   FlatList,
   TouchableOpacity,
@@ -16,6 +15,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import AppText from '../components/AppText';
 
 import { TripPlan, UserSelections } from '../types/tripTypes';
 import { getFilteredTripOptions } from '../utils/mockTripPlans';
@@ -196,33 +196,33 @@ const TripSuggestionsScreen: React.FC = () => {
               style={styles.cardImageGradient}
             >
               <View style={styles.destinationContainer}>
-                <Text style={styles.destinationText}>{tripItem.destination}</Text>
+                <AppText style={styles.destinationText}>{tripItem.destination}</AppText>
                 <View style={styles.tripTypeChip}>
-                  <Text style={styles.tripTypeText}>{tripItem.tripType}</Text>
+                  <AppText style={styles.tripTypeText}>{tripItem.tripType}</AppText>
                 </View>
               </View>
             </LinearGradient>
           </ImageBackground>
           
           <View style={styles.cardContent}>
-            <Text style={styles.summaryText}>{tripItem.summary}</Text>
+            <AppText style={styles.summaryText}>{tripItem.summary}</AppText>
             
             <View style={styles.tripDetailsContainer}>
               <View style={styles.tripDetailItem}>
                 <Ionicons name="time-outline" size={18} color="#6A11CB" />
-                <Text style={styles.tripDetailText}>{tripItem.duration}</Text>
+                <AppText style={styles.tripDetailText}>{tripItem.duration}</AppText>
               </View>
               
               <View style={styles.tripDetailItem}>
                 <Ionicons name="cash-outline" size={18} color="#6A11CB" />
-                <Text style={styles.tripDetailText}>{tripItem.budget}</Text>
+                <AppText style={styles.tripDetailText}>{tripItem.budget}</AppText>
               </View>
               
               <View style={styles.tripDetailItem}>
                 <Ionicons name="bed-outline" size={18} color="#6A11CB" />
-                <Text style={styles.tripDetailText}>
+                <AppText style={styles.tripDetailText}>
                   {tripItem.accommodation?.type || 'Various Options'}
-                </Text>
+                </AppText>
               </View>
             </View>
             
@@ -230,7 +230,7 @@ const TripSuggestionsScreen: React.FC = () => {
               style={styles.viewDetailsButton}
               onPress={() => handleSelectTrip(tripItem)}
             >
-              <Text style={styles.viewDetailsText}>View Full Itinerary</Text>
+              <AppText style={styles.viewDetailsText}>View Full Itinerary</AppText>
               <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
@@ -259,7 +259,7 @@ const TripSuggestionsScreen: React.FC = () => {
           <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         
-        <Text style={styles.headerTitle}>Trip Options</Text>
+        <AppText style={styles.headerTitle}>Trip Options</AppText>
         
         <TouchableOpacity 
           style={styles.refreshButton}
@@ -284,12 +284,12 @@ const TripSuggestionsScreen: React.FC = () => {
               <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
             </TouchableOpacity>
             
-            <Text style={styles.title}>Your Trip Suggestions</Text>
-            <Text style={styles.subtitle}>
+            <AppText style={styles.title}>Your Trip Suggestions</AppText>
+            <AppText style={styles.subtitle}>
               {loading
                 ? 'Finding perfect destinations for you...'
                 : `Based on your ${userSelections?.tripType || 'preferences'}`}
-            </Text>
+            </AppText>
           </View>
           
           {loading ? (
@@ -309,7 +309,7 @@ const TripSuggestionsScreen: React.FC = () => {
               >
                 <Ionicons name="planet-outline" size={50} color="#FFFFFF" />
               </Animated.View>
-              <Text style={styles.loadingText}>Crafting perfect trips for you...</Text>
+              <AppText style={styles.loadingText}>Crafting perfect trips for you...</AppText>
             </View>
           ) : (
             <AnimatedFlatList
@@ -337,7 +337,7 @@ const TripSuggestionsScreen: React.FC = () => {
               onPress={handleRefresh}
             >
               <Ionicons name="refresh" size={18} color="#FFFFFF" />
-              <Text style={styles.refreshText}>More Options</Text>
+              <AppText style={styles.refreshText}>More Options</AppText>
             </TouchableOpacity>
           )}
         </Animated.View>
@@ -345,33 +345,33 @@ const TripSuggestionsScreen: React.FC = () => {
         {/* User preferences summary */}
         {!loading && (
           <View style={styles.preferencesContainer}>
-            <Text style={styles.preferencesTitle}>Your Preferences</Text>
+            <AppText style={styles.preferencesTitle}>Your Preferences</AppText>
             <View style={styles.preferencesChips}>
               {userSelections?.tripType && (
                 <View style={styles.preferenceChip}>
                   <Ionicons name="map-outline" size={14} color="#6A11CB" />
-                  <Text style={styles.preferenceChipText}>{userSelections.tripType}</Text>
+                  <AppText style={styles.preferenceChipText}>{userSelections.tripType}</AppText>
                 </View>
               )}
               
               {userSelections?.vibe && (
                 <View style={styles.preferenceChip}>
                   <Ionicons name="heart-outline" size={14} color="#6A11CB" />
-                  <Text style={styles.preferenceChipText}>{userSelections.vibe}</Text>
+                  <AppText style={styles.preferenceChipText}>{userSelections.vibe}</AppText>
                 </View>
               )}
               
               {userSelections?.budget && (
                 <View style={styles.preferenceChip}>
                   <Ionicons name="cash-outline" size={14} color="#6A11CB" />
-                  <Text style={styles.preferenceChipText}>{userSelections.budget}</Text>
+                  <AppText style={styles.preferenceChipText}>{userSelections.budget}</AppText>
                 </View>
               )}
               
               {userSelections?.duration && (
                 <View style={styles.preferenceChip}>
                   <Ionicons name="time-outline" size={14} color="#6A11CB" />
-                  <Text style={styles.preferenceChipText}>{userSelections.duration}</Text>
+                  <AppText style={styles.preferenceChipText}>{userSelections.duration}</AppText>
                 </View>
               )}
             </View>
@@ -619,4 +619,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default TripSuggestionsScreen; 
+export default TripSuggestionsScreen;

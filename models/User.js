@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 const userSchema = new mongoose.Schema({
   fullName: {
@@ -36,9 +37,20 @@ const userSchema = new mongoose.Schema({
   },
   resetPasswordToken: String,
   resetPasswordExpire: Date,
+  resetTokenHash: String,
+  resetTokenExpires: Date,
+  phone: { type: String },
+  country: { type: String },
+  language: { type: String },
+  avatarUrl: { type: String },
+  isPremium: { type: Boolean, default: false },
+  twoFactorEnabled: { type: Boolean, default: false },
   preferences: {
-    type: Object,
-    default: {}
+    budget: { type: String },
+    tripType: { type: String },
+    currency: { type: String },
+    distanceUnit: { type: String },
+    interests: [{ type: String }],
   },
   role: {
     type: String,
@@ -73,6 +85,14 @@ userSchema.methods.matchPassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
+// Add a method to validate the reset token
+userSchema.methods.isValidResetToken = function (token) {
+  return (
+    this.resetTokenHash === crypto.createHash('sha256').update(token).digest('hex') &&
+    this.resetTokenExpires > Date.now()
+  );
+};
+
 const User = mongoose.model('User', userSchema);
 
-module.exports = User; 
+module.exports = User;

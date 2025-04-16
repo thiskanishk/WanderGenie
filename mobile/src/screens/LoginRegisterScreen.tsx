@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
-  Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
@@ -28,6 +27,7 @@ import * as Google from 'expo-auth-session/providers/google';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
+import AppText from '../components/AppText';
 
 // Constants
 const { width, height } = Dimensions.get('window');
@@ -41,8 +41,22 @@ const BACKGROUND_IMAGES = [
   'https://images.unsplash.com/photo-1506197603052-3cc9c3a201bd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80',
 ];
 
+interface CustomInputProps {
+  icon: string;
+  placeholder: string;
+  value: string;
+  onChangeText: (text: string) => void;
+  secureTextEntry?: boolean;
+  keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  error?: string;
+  toggleVisibility?: () => void;
+  showVisibilityIcon?: boolean;
+  isPasswordVisible?: boolean;
+}
+
 // Custom Input component with icon and validation
-const CustomInput = ({ 
+const CustomInput: React.FC<CustomInputProps> = ({ 
   icon, 
   placeholder, 
   value, 
@@ -78,13 +92,13 @@ const CustomInput = ({
           />
         </TouchableOpacity>
       )}
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      {error ? <AppText style={styles.errorText}>{error}</AppText> : null}
     </View>
   );
 };
 
 // Custom Button component
-const CustomButton = ({ title, onPress, isLoading = false, style, textStyle }) => {
+const CustomButton: React.FC<{ title: string; onPress: () => void; isLoading?: boolean; style?: object; textStyle?: object }> = ({ title, onPress, isLoading = false, style, textStyle }) => {
   return (
     <TouchableOpacity 
       style={[styles.button, style]} 
@@ -95,15 +109,15 @@ const CustomButton = ({ title, onPress, isLoading = false, style, textStyle }) =
       {isLoading ? (
         <ActivityIndicator color="#FFFFFF" size="small" />
       ) : (
-        <Text style={[styles.buttonText, textStyle]}>{title}</Text>
+        <AppText style={[styles.buttonText, textStyle]}>{title}</AppText>
       )}
     </TouchableOpacity>
   );
 };
 
 // Password strength component
-const PasswordStrengthMeter = ({ password }) => {
-  const getStrength = (password) => {
+const PasswordStrengthMeter: React.FC<{ password: string }> = ({ password }) => {
+  const getStrength = (password: string) => {
     if (!password) return 0;
     
     let score = 0;
@@ -143,24 +157,24 @@ const PasswordStrengthMeter = ({ password }) => {
         <View style={[styles.strengthBar, { backgroundColor: strength >= 3 ? getColor() : '#D1D5DB' }]} />
         <View style={[styles.strengthBar, { backgroundColor: strength >= 4 ? getColor() : '#D1D5DB' }]} />
       </View>
-      <Text style={[styles.strengthLabel, { color: getColor() }]}>{getLabel()}</Text>
+      <AppText style={[styles.strengthLabel, { color: getColor() }]}>{getLabel()}</AppText>
     </View>
   );
 };
 
 // Divider with text
-const Divider = ({ text }) => {
+const Divider: React.FC<{ text: string }> = ({ text }) => {
   return (
     <View style={styles.divider}>
       <View style={styles.dividerLine} />
-      <Text style={styles.dividerText}>{text}</Text>
+      <AppText style={styles.dividerText}>{text}</AppText>
       <View style={styles.dividerLine} />
     </View>
   );
 };
 
 // Success Toast component
-const SuccessToast = ({ message, visible, onHide }) => {
+const SuccessToast: React.FC<{ message: string; visible: boolean; onHide: () => void }> = ({ message, visible, onHide }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   
   useEffect(() => {
@@ -189,14 +203,14 @@ const SuccessToast = ({ message, visible, onHide }) => {
     <Animated.View style={[styles.toast, { opacity: fadeAnim }]}>
       <View style={styles.toastContent}>
         <Ionicons name="checkmark-circle" size={24} color="#10B981" />
-        <Text style={styles.toastText}>{message}</Text>
+        <AppText style={styles.toastText}>{message}</AppText>
       </View>
     </Animated.View>
   );
 };
 
 // Main LoginRegisterScreen component
-const LoginRegisterScreen = ({ navigation }) => {
+const LoginRegisterScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { login, register, error: authError, loading: authLoading, clearError } = useAuth();
   const nav = useNavigation();
   
@@ -210,7 +224,7 @@ const LoginRegisterScreen = ({ navigation }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string; fullName?: string; confirmPassword?: string; terms?: string }>({});
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [showConfetti, setShowConfetti] = useState(false);
@@ -274,14 +288,14 @@ const LoginRegisterScreen = ({ navigation }) => {
   };
   
   // Validate email function
-  const validateEmail = (email) => {
+  const validateEmail = (email: string) => {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return regex.test(email);
   };
   
   // Validate form function
   const validateForm = () => {
-    const newErrors = {};
+    const newErrors: { email?: string; password?: string; fullName?: string; confirmPassword?: string; terms?: string } = {};
     
     if (!email) {
       newErrors.email = 'Email is required';
@@ -444,8 +458,8 @@ const LoginRegisterScreen = ({ navigation }) => {
                   style={styles.logo}
                   resizeMode="contain"
                 />
-                <Text style={styles.logoText}>WanderGenie</Text>
-                <Text style={styles.tagline}>Your AI Travel Companion</Text>
+                <AppText style={styles.logoText}>WanderGenie</AppText>
+                <AppText style={styles.tagline}>Your AI Travel Companion</AppText>
               </View>
             </LinearGradient>
           </BlurView>
@@ -465,14 +479,14 @@ const LoginRegisterScreen = ({ navigation }) => {
                 }
               ]}
             >
-              <Text style={styles.formTitle}>
+              <AppText style={styles.formTitle}>
                 {isLogin ? 'Welcome Back' : 'Create Account'}
-              </Text>
-              <Text style={styles.formSubtitle}>
+              </AppText>
+              <AppText style={styles.formSubtitle}>
                 {isLogin 
                   ? 'Sign in to continue your journey' 
                   : 'Join us and start exploring the world'}
-              </Text>
+              </AppText>
               
               {/* Registration Form Fields */}
               {!isLogin && (
@@ -539,13 +553,13 @@ const LoginRegisterScreen = ({ navigation }) => {
                       />
                     </TouchableOpacity>
                     <View style={styles.termsTextContainer}>
-                      <Text style={styles.termsText}>
+                      <AppText style={styles.termsText}>
                         I accept the{' '}
-                        <Text style={styles.termsLink}>Terms of Service</Text>
+                        <AppText style={styles.termsLink}>Terms of Service</AppText>
                         {' '}and{' '}
-                        <Text style={styles.termsLink}>Privacy Policy</Text>
-                      </Text>
-                      {errors.terms && <Text style={styles.errorText}>{errors.terms}</Text>}
+                        <AppText style={styles.termsLink}>Privacy Policy</AppText>
+                      </AppText>
+                      {errors.terms && <AppText style={styles.errorText}>{errors.terms}</AppText>}
                     </View>
                   </View>
                 </>
@@ -557,7 +571,7 @@ const LoginRegisterScreen = ({ navigation }) => {
                   style={styles.forgotPasswordContainer}
                   onPress={handleForgotPassword}
                 >
-                  <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                  <AppText style={styles.forgotPasswordText}>Forgot Password?</AppText>
                 </TouchableOpacity>
               )}
               
@@ -579,7 +593,7 @@ const LoginRegisterScreen = ({ navigation }) => {
                   disabled={isLoading}
                 >
                   <Ionicons name="logo-google" size={24} color="#EA4335" />
-                  <Text style={styles.socialButtonText}>Google</Text>
+                  <AppText style={styles.socialButtonText}>Google</AppText>
                 </TouchableOpacity>
                 
                 {Platform.OS === 'ios' && (
@@ -589,20 +603,20 @@ const LoginRegisterScreen = ({ navigation }) => {
                     disabled={isLoading}
                   >
                     <Ionicons name="logo-apple" size={24} color="#000000" />
-                    <Text style={styles.socialButtonText}>Apple</Text>
+                    <AppText style={styles.socialButtonText}>Apple</AppText>
                   </TouchableOpacity>
                 )}
               </View>
               
               {/* Toggle between Login and Register */}
               <View style={styles.toggleFormContainer}>
-                <Text style={styles.toggleFormText}>
+                <AppText style={styles.toggleFormText}>
                   {isLogin ? "New here? " : "Already have an account? "}
-                </Text>
+                </AppText>
                 <TouchableOpacity onPress={toggleForm}>
-                  <Text style={styles.toggleFormLink}>
+                  <AppText style={styles.toggleFormLink}>
                     {isLogin ? "Create an account" : "Log in"}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               </View>
             </Animated.View>
@@ -877,4 +891,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default LoginRegisterScreen; 
+export default LoginRegisterScreen;

@@ -54,6 +54,7 @@ export default function App() {
           console.warn('Font loading issue:', fontResult.error);
         }
       } catch (e) {
+        setFontError(true);
         console.warn('Error during app preparation:', e);
       } finally {
         // Artificially delay for a smoother startup
@@ -141,4 +142,4 @@ function NavigationRoot() {
   }
 
   return token ? <AppNavigator /> : <AuthNavigator />;
-} 
+}

@@ -9,6 +9,8 @@ import * as Font from 'expo-font';
 import { NavigationContainer } from '@react-navigation/native';
 import { enableScreens } from 'react-native-screens';
 import { Alert, Text } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Onboarding from './src/screens/Onboarding'; // Import the new Onboarding component
 
 // Enable screens for better navigation performance
 enableScreens();
@@ -47,6 +49,7 @@ export default function App() {
   const [appIsReady, setAppIsReady] = useState(false);
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [fontError, setFontError] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false); // State to track onboarding visibility
 
   // Load fonts function
   const loadFonts = async () => {
@@ -57,28 +60,23 @@ export default function App() {
     } catch (error) {
       console.warn('Error loading fonts:', error);
       setFontError(true);
-      
-      // Load fallback system fonts
-      try {
-        // Create a mapping using only system fonts
-        const systemFonts = {};
-        setFontsLoaded(true); // We consider fonts loaded even with fallbacks
-      } catch (fallbackError) {
-        console.error('Critical error loading fonts:', fallbackError);
-        // Continue without custom fonts at all
-      }
+      setFontsLoaded(true); // Consider fonts loaded even with errors
     }
   };
 
-  // Prepare the app (load fonts, etc)
+  // Check if onboarding should be shown
+  const checkOnboardingStatus = async () => {
+    const tourShown = await AsyncStorage.getItem('tour_shown');
+    setShowOnboarding(!tourShown); // Show onboarding if tour_shown is not set
+  };
+
+  // Prepare the app (load fonts, check onboarding status, etc)
   useEffect(() => {
     async function prepare() {
       try {
-        // Load fonts
         await loadFonts();
-        
-        // Add artificial delay for smoother startup
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await checkOnboardingStatus();
+        await new Promise(resolve => setTimeout(resolve, 500)); // Artificial delay for smoother startup
       } catch (e) {
         console.warn('Error preparing app:', e);
       } finally {
@@ -122,7 +120,12 @@ export default function App() {
             <SafeAreaProvider onLayout={onLayoutRootView}>
               <NavigationContainer>
                 <StatusBar style="auto" />
-                {USE_SIMPLE_APP ? (
+                {showOnboarding ? (
+                  <Onboarding onComplete={() => {
+                    AsyncStorage.setItem('tour_shown', 'true');
+                    setShowOnboarding(false);
+                  }} />
+                ) : USE_SIMPLE_APP ? (
                   <SimpleAppNavigator />
                 ) : (
                   <AuthAwareNavigationRoot />
@@ -135,4 +138,4 @@ export default function App() {
       </PersistGate>
     </ReduxProvider>
   );
-} 
+}
