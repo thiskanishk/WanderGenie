@@ -29,6 +29,8 @@ import TripCard from '../components/TripCard';
 import SearchBar from '../components/SearchBar';
 import BigActionButton from '../components/BigActionButton';
 import { HomeStackParamList } from '../navigation/AppNavigator';
+import WelcomeHeader from '../components/WelcomeHeader';
+import { useAuth } from '../contexts/AuthContext';
 
 // Define types
 type HomeScreenNavigationProp = NativeStackNavigationProp<HomeStackParamList, 'Home'>;
@@ -131,6 +133,7 @@ type RootStackParamList = {
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const dispatch = useDispatch<AppThunkDispatch>();
+  const { logout } = useAuth();
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   
@@ -725,6 +728,17 @@ const HomeScreen: React.FC = () => {
     </Animated.View>
   );
   
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      await logout();
+      // Navigation will be handled by AuthAwareNavigationRoot
+    } catch (error) {
+      console.error('Logout error:', error);
+      Alert.alert('Logout Error', 'There was a problem logging out. Please try again.');
+    }
+  };
+  
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
@@ -736,12 +750,9 @@ const HomeScreen: React.FC = () => {
             <Ionicons name="compass" size={24} color="#6200ee" />
             <Text style={styles.heading}>WanderGenie</Text>
           </View>
-          <Text style={styles.greeting}>
-            Hi {user?.firstName || 'Traveler'}!
-          </Text>
-          <Text style={styles.subtitle}>Where to next?</Text>
+          <WelcomeHeader />
         </View>
-        <TouchableOpacity style={styles.profileButton}>
+        <TouchableOpacity style={styles.profileButton} onPress={handleLogout}>
           <Ionicons name="person" size={24} color="#6200ee" />
         </TouchableOpacity>
       </View>

@@ -20,6 +20,7 @@ import { useAppSelector } from './src/hooks/reduxHooks';
 import { useNetworkStatus } from './src/hooks/useNetworkStatus';
 import OfflineBanner from './src/components/OfflineBanner';
 import LoadingScreen from './src/components/LoadingScreen';
+import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 
 // Flag to switch between simple and full app
 const USE_SIMPLE_APP = true; // Set to true for simpler version during development
@@ -67,17 +68,19 @@ export default function App() {
     <ReduxProvider store={store}>
       <PersistGate loading={<LoadingScreen />} persistor={persistor}>
         <ApolloProvider client={client}>
-          <SafeAreaProvider onLayout={onLayoutRootView}>
-            <NavigationContainer>
-              <StatusBar style="auto" />
-              {USE_SIMPLE_APP ? (
-                <SimpleAppNavigator />
-              ) : (
-                <NavigationRoot />
-              )}
-            </NavigationContainer>
-            {!USE_SIMPLE_APP && <NetworkStatusBanner />}
-          </SafeAreaProvider>
+          <AuthProvider>
+            <SafeAreaProvider onLayout={onLayoutRootView}>
+              <NavigationContainer>
+                <StatusBar style="auto" />
+                {USE_SIMPLE_APP ? (
+                  <SimpleAppNavigator />
+                ) : (
+                  <AuthAwareNavigationRoot />
+                )}
+              </NavigationContainer>
+              {!USE_SIMPLE_APP && <NetworkStatusBanner />}
+            </SafeAreaProvider>
+          </AuthProvider>
         </ApolloProvider>
       </PersistGate>
     </ReduxProvider>
@@ -98,7 +101,18 @@ function NetworkStatusBanner() {
   return !isConnected ? <OfflineBanner /> : null;
 }
 
-// Navigation root component that checks auth state
+// Navigation root component that checks auth state from AuthContext
+function AuthAwareNavigationRoot() {
+  const { isLoggedIn, loading } = useAuth();
+  
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  return isLoggedIn ? <AppNavigator /> : <AuthNavigator />;
+}
+
+// Legacy Redux-based navigation root
 function NavigationRoot() {
   // Get auth state from Redux store
   const { token, isLoading } = useAppSelector((state: { auth: AuthState }) => state.auth);
