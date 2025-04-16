@@ -5,9 +5,9 @@ import { ApolloProvider } from '@apollo/client';
 import { Provider as ReduxProvider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import * as SplashScreen from 'expo-splash-screen';
-import * as Font from 'expo-font';
 import { NavigationContainer } from '@react-navigation/native';
 import { enableScreens } from 'react-native-screens';
+import { Alert } from 'react-native';
 
 // Enable screens for better navigation performance
 enableScreens();
@@ -21,6 +21,8 @@ import { useNetworkStatus } from './src/hooks/useNetworkStatus';
 import OfflineBanner from './src/components/OfflineBanner';
 import LoadingScreen from './src/components/LoadingScreen';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
+import { ThemeProvider } from './src/contexts/ThemeContext';
+import { loadFonts } from './src/utils/fonts';
 
 // Flag to switch between simple and full app
 const USE_SIMPLE_APP = true; // Set to true for simpler version during development
@@ -28,21 +30,31 @@ const USE_SIMPLE_APP = true; // Set to true for simpler version during developme
 // Keep splash screen visible while we initialize
 SplashScreen.preventAutoHideAsync();
 
+// Interface for Auth state
+interface AuthState {
+  token: string | null;
+  isLoading: boolean;
+  user?: {
+    firstName?: string;
+  }
+}
+
 export default function App() {
   const [appIsReady, setAppIsReady] = useState(false);
+  const [fontError, setFontError] = useState(false);
 
   // Prepare the app (load fonts, etc)
   useEffect(() => {
     async function prepare() {
       try {
-        // Load fonts
-        await Font.loadAsync({
-          'Poppins-Regular': require('./src/assets/fonts/Poppins-Regular.ttf'),
-          'Poppins-Medium': require('./src/assets/fonts/Poppins-Medium.ttf'),
-          'Poppins-Bold': require('./src/assets/fonts/Poppins-Bold.ttf'),
-        });
+        // Load fonts using our utility
+        const fontResult = await loadFonts();
+        if (!fontResult.success) {
+          setFontError(true);
+          console.warn('Font loading issue:', fontResult.error);
+        }
       } catch (e) {
-        console.warn('Error loading assets:', e);
+        console.warn('Error during app preparation:', e);
       } finally {
         // Artificially delay for a smoother startup
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -56,9 +68,22 @@ export default function App() {
   // Callback when layout is ready to hide splash screen
   const onLayoutRootView = useCallback(async () => {
     if (appIsReady) {
-      await SplashScreen.hideAsync();
+      try {
+        await SplashScreen.hideAsync();
+        
+        // Show an alert if there was a font error but only in development
+        if (fontError && __DEV__) {
+          Alert.alert(
+            'Font Loading Issue',
+            'Some custom fonts could not be loaded. The app will use system fonts instead.',
+            [{ text: 'OK' }]
+          );
+        }
+      } catch (e) {
+        console.warn('Error hiding splash screen:', e);
+      }
     }
-  }, [appIsReady]);
+  }, [appIsReady, fontError]);
 
   if (!appIsReady) {
     return <LoadingScreen />;
@@ -68,31 +93,25 @@ export default function App() {
     <ReduxProvider store={store}>
       <PersistGate loading={<LoadingScreen />} persistor={persistor}>
         <ApolloProvider client={client}>
-          <AuthProvider>
-            <SafeAreaProvider onLayout={onLayoutRootView}>
-              <NavigationContainer>
-                <StatusBar style="auto" />
-                {USE_SIMPLE_APP ? (
-                  <SimpleAppNavigator />
-                ) : (
-                  <AuthAwareNavigationRoot />
-                )}
-              </NavigationContainer>
-              {!USE_SIMPLE_APP && <NetworkStatusBanner />}
-            </SafeAreaProvider>
-          </AuthProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              <SafeAreaProvider onLayout={onLayoutRootView}>
+                <NavigationContainer>
+                  <StatusBar style="auto" />
+                  {USE_SIMPLE_APP ? (
+                    <SimpleAppNavigator />
+                  ) : (
+                    <AuthAwareNavigationRoot />
+                  )}
+                </NavigationContainer>
+                {!USE_SIMPLE_APP && <NetworkStatusBanner />}
+              </SafeAreaProvider>
+            </AuthProvider>
+          </ThemeProvider>
         </ApolloProvider>
       </PersistGate>
     </ReduxProvider>
   );
-}
-
-interface AuthState {
-  token: string | null;
-  isLoading: boolean;
-  user?: {
-    firstName?: string;
-  }
 }
 
 // Network status banner component
