@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const aiRoutes = require('./routes/ai');
+const tripSuggestionsRoutes = require('./routes/tripSuggestions');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -12,6 +13,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api', aiRoutes);
+app.use('', tripSuggestionsRoutes); // Mount the trip suggestions routes
 
 // Health check endpoint
 app.get('/health', (req, res) => {

@@ -21,17 +21,17 @@ import { useDispatch, useSelector } from 'react-redux';
 import { ThunkDispatch } from '@reduxjs/toolkit';
 import { AnyAction } from 'redux';
 import { LinearGradient } from 'expo-linear-gradient';
-import axios from 'axios';
-import { OPENAI_API_KEY } from '@env'; // Make sure to install react-native-dotenv
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { fetchTrips, Trip } from '../store/slices/tripsSlice';
 import { useAppSelector } from '../hooks/reduxHooks';
 import TripCard from '../components/TripCard';
 import SearchBar from '../components/SearchBar';
 import BigActionButton from '../components/BigActionButton';
+import { HomeStackParamList } from '../navigation/AppNavigator';
 
 // Define types
-type HomeScreenNavigationProp = any; // Use 'any' as a temporary workaround for StackNavigationProp issue
+type HomeScreenNavigationProp = NativeStackNavigationProp<HomeStackParamList, 'Home'>;
 type AppThunkDispatch = ThunkDispatch<RootState, unknown, AnyAction>;
 
 interface FeaturedDestination {
@@ -109,6 +109,25 @@ const DESTINATION_DETAILS = {
   },
 };
 
+// Set this to false to use the actual backend API
+const USE_MOCK_AI = true;
+
+// Configure the API endpoint for the backend (change this to your actual server address)
+const API_BASE_URL = "http://192.168.1.4:3001/api";
+
+type RootStackParamList = {
+  Home: undefined;
+  AITripPlannerScreen: {
+    userSelections: {
+      tripType: string;
+      vibe: string;
+      budget: string;
+      duration: string;
+    }
+  };
+  // Add other screens as needed
+};
+
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const dispatch = useDispatch<AppThunkDispatch>();
@@ -137,7 +156,8 @@ const HomeScreen: React.FC = () => {
   const { user } = useAppSelector((state: RootState) => state.auth);
   
   // Filter for upcoming trips only
-  const upcomingTrips = trips.filter((trip: Trip) => {
+  // Note: TypeScript may show an error about untyped function calls, but this is safe to ignore
+  const upcomingTrips = trips.filter(function(trip: Trip) {
     const today = new Date();
     const startDate = new Date(trip.startDate);
     return startDate >= today;
@@ -149,6 +169,22 @@ const HomeScreen: React.FC = () => {
     { id: '2', name: 'Tokyo', country: 'Japan', image: 'https://example.com/tokyo.jpg' },
     { id: '3', name: 'New York', country: 'USA', image: 'https://example.com/newyork.jpg' },
   ];
+  
+  // Mock trip plan for direct navigation to result screen
+  const mockTripPlan = {
+    destination: "Bali, Indonesia",
+    duration: "5 Days",
+    summary: "A relaxing beach adventure with culture and local food",
+    budget: "Mid-range",
+    itinerary: [
+      { day: 1, activities: ["Arrive in Bali", "Sunset at Tanah Lot Temple"] },
+      { day: 2, activities: ["Ubud Forest", "Local market walk"] },
+      { day: 3, activities: ["Snorkeling at Blue Lagoon", "Beach chill"] },
+      { day: 4, activities: ["Temple visit", "Balinese massage"] },
+      { day: 5, activities: ["Beach breakfast", "Departure"] }
+    ],
+    tips: ["Carry sunscreen", "Book temple tickets in advance", "Download offline maps"]
+  };
   
   useEffect(() => {
     // Fetch trips when component mounts
@@ -167,11 +203,50 @@ const HomeScreen: React.FC = () => {
   };
   
   const navigateToAIPlanner = () => {
-    navigation.navigate('AIPlanner' as never);
+    navigation.navigate('AITripPlannerScreen', { 
+      userSelections: {
+        tripType: selectedTripType || 'Beach',
+        vibe: selectedVibe || 'Relaxing',
+        budget: selectedBudget || 'Mid-Range',
+        duration: selectedDuration || '1-2 Weeks'
+      }
+    });
+  };
+  
+  const handleGeneratePlan = async () => {
+    // For testing, make sure we have the required values
+    const testTripType = selectedTripType || 'Beach';
+    const testVibe = selectedVibe || 'Relaxing';
+    const testBudget = selectedBudget || 'Mid-Range';
+    const testDuration = selectedDuration || '1-2 Weeks';
+    
+    // Set loading state
+    setIsGeneratingPlan(true);
+    
+    try {
+      // Navigate to AITripPlannerScreen with user selections
+      navigation.navigate('AITripPlannerScreen', { 
+        userSelections: {
+          tripType: testTripType,
+          vibe: testVibe, 
+          budget: testBudget,
+          duration: testDuration
+        }
+      });
+    } catch (error) {
+      console.error('Failed to generate trip plan:', error);
+      Alert.alert(
+        'Generation Failed',
+        `We couldn't generate your trip plan: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsGeneratingPlan(false);
+    }
   };
   
   const navigateToTripDetail = (tripId: string) => {
-    navigation.navigate('TripDetail' as never, { tripId } as never);
+    navigation.navigate('TripDetail', { tripId });
   };
   
   // Animation effect
@@ -277,40 +352,20 @@ const HomeScreen: React.FC = () => {
     setIsGeneratingPlan(true);
     
     try {
-      // Call the backend API to generate the trip plan
-      // Replace 192.168.1.4 with your actual local IP address
-      const response = await fetch("http://192.168.1.4:3001/api/ai/plan", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          tripType: selectedTripType, 
+      // Navigate to AITripPlannerScreen with user selections
+      navigation.navigate('AITripPlannerScreen', { 
+        userSelections: {
+          tripType: selectedTripType,
           vibe: selectedVibe, 
-          budget: selectedBudget, 
-          duration: selectedDuration 
-        }),
+          budget: selectedBudget,
+          duration: selectedDuration
+        }
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Server error response:', errorData);
-        throw new Error(
-          errorData.error || `Server responded with status: ${response.status}`
-        );
-      }
-
-      const data = await response.json();
-      console.log('Received trip plan from backend:', data.tripPlan.destination);
-      
-      // Navigate to results screen with the trip plan data
-      navigation.navigate('AIPlannerResult', { 
-        tripPlan: data.tripPlan,
-        userSelections: data.userSelections
-      });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to generate trip plan:', error);
       Alert.alert(
         'Generation Failed',
-        `We couldn't generate your trip plan: ${error.message || 'Unknown error'}. Please check your network connection and try again.`,
+        `We couldn't generate your trip plan: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
         [{ text: 'OK' }]
       );
     } finally {
@@ -321,8 +376,13 @@ const HomeScreen: React.FC = () => {
   // Plan trip based on selected destination
   const planSpecificTrip = () => {
     if (selectedDestination) {
-      navigation.navigate('AIPlanner', {
-        destination: selectedDestination,
+      navigation.navigate('AITripPlannerScreen', {
+        userSelections: {
+          tripType: selectedTripType || 'Beach',
+          vibe: selectedVibe || 'Relaxing',
+          budget: selectedBudget || 'Mid-Range',
+          duration: selectedDuration || '1-2 Weeks'
+        }
       });
     }
   };
@@ -516,7 +576,7 @@ const HomeScreen: React.FC = () => {
                 styles.generateButton,
                 !selectedDuration ? styles.disabledButton : null
               ]}
-              onPress={generateSmartPlan}
+              onPress={handleGeneratePlan}
               disabled={!selectedDuration}
             >
               <Text style={styles.generateButtonText}>✨ Generate Smart Plan</Text>
@@ -736,16 +796,24 @@ const HomeScreen: React.FC = () => {
             title="Smart Trip Planner"
             subtitle="Generate personalized itineraries with AI"
             icon="sparkles-outline"
-            onPress={navigateToAIPlanner}
+            onPress={handleGeneratePlan}
             gradient={['#6A11CB', '#2575FC']}
           />
+          
+          {/* Button for testing the AITripResultScreen */}
+          <TouchableOpacity 
+            style={styles.testButton}
+            onPress={navigateToAIPlanner}
+          >
+            <Text style={styles.testButtonText}>Start Planning</Text>
+          </TouchableOpacity>
         </View>
         
         {/* Upcoming Trips */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Upcoming Trips</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate('SavedTrips')}>
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity>
           </View>
@@ -1319,6 +1387,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     color: '#333',
+  },
+  testButton: {
+    backgroundColor: '#6200ee',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  testButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
 

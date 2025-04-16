@@ -8,14 +8,15 @@ import { ParamListBase } from '@react-navigation/native';
 // Import actual screens
 import HomeScreen from '../screens/HomeScreen';
 import AITripPlannerScreen from '../screens/AITripPlannerScreen';
-import AIPlannerResultScreen from '../screens/AIPlannerResultScreen';
+import AITripResultScreen from '../screens/AITripResultScreen';
+import SavedTripsScreen from '../screens/SavedTripsScreen';
+import TripSuggestionsScreen from '../screens/TripSuggestionsScreen';
 
 // Create placeholder components for missing screens
 const PlaceholderScreen: React.FC = () => null;
 
 // Use placeholders for missing screens
-const TripsScreen = PlaceholderScreen;
-const ProfileScreen = PlaceholderScreen; 
+const ProfileScreen = PlaceholderScreen;
 const TripDetailScreen = PlaceholderScreen;
 const ChecklistScreen = PlaceholderScreen;
 const ShareTripScreen = PlaceholderScreen;
@@ -25,20 +26,65 @@ const SettingsScreen = PlaceholderScreen;
 export type HomeStackParamList = {
   Home: undefined;
   AIPlanner: undefined;
+  AITripPlannerScreen: {
+    userSelections?: {
+      tripType: string;
+      vibe: string;
+      budget: string;
+      duration: string;
+    }
+  };
+  TripSuggestionsScreen: { userSelections: any };
+  AITripResultScreen: { 
+    tripPlan?: any;
+    userSelections?: any;
+  };
   TripDetail: { tripId: string };
   Checklist: { tripId: string };
   ShareTrip: { tripId: string };
+  SavedTrips: { tripPlanSummary?: any };
 };
 
 export type TripsStackParamList = {
   Trips: undefined;
   TripDetail: { tripId: string };
   ShareTrip: { tripId: string };
+  EditTrip: { tripId: string };
+  AIPlanner: undefined;
+  AITripPlannerScreen: {
+    userSelections?: {
+      tripType: string;
+      vibe: string;
+      budget: string;
+      duration: string;
+    }
+  };
+  TripSuggestionsScreen: { userSelections: any };
+  SavedTrips: { tripPlanSummary?: any };
 };
 
 export type ProfileStackParamList = {
   Profile: undefined;
   Settings: undefined;
+};
+
+export type RootStackParamList = {
+  Home: undefined;
+  AIPlanner: undefined;
+  AITripPlannerScreen: {
+    userSelections?: {
+      tripType: string;
+      vibe: string;
+      budget: string;
+      duration: string;
+    }
+  };
+  TripSuggestionsScreen: { userSelections: any };
+  AITripResultScreen: { 
+    tripPlan?: any;
+    userSelections?: any;
+  };
+  SavedTrips: { tripPlanSummary?: any };
 };
 
 export type AppTabParamList = {
@@ -48,11 +94,11 @@ export type AppTabParamList = {
 };
 
 // Create navigators
-const HomeStack = createStackNavigator();
-const TripsStack = createStackNavigator();
-const ProfileStack = createStackNavigator();
-const Tab = createBottomTabNavigator();
-const Stack = createNativeStackNavigator();
+const HomeStack = createStackNavigator<HomeStackParamList>();
+const TripsStack = createStackNavigator<TripsStackParamList>();
+const ProfileStack = createStackNavigator<ProfileStackParamList>();
+const Tab = createBottomTabNavigator<AppTabParamList>();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 // Home stack
 function HomeStackNavigator() {
@@ -69,8 +115,18 @@ function HomeStackNavigator() {
         options={{ title: 'AI Trip Planner' }}
       />
       <HomeStack.Screen 
-        name="AIPlannerResult" 
-        component={AIPlannerResultScreen} 
+        name="AITripPlannerScreen" 
+        component={AITripPlannerScreen} 
+        options={{ title: 'AI Trip Planner' }}
+      />
+      <HomeStack.Screen 
+        name="TripSuggestionsScreen" 
+        component={TripSuggestionsScreen} 
+        options={{ headerShown: false }}
+      />
+      <HomeStack.Screen 
+        name="AITripResultScreen" 
+        component={AITripResultScreen} 
         options={{ 
           headerShown: false,
         }} 
@@ -90,6 +146,11 @@ function HomeStackNavigator() {
         component={ShareTripScreen} 
         options={{ title: 'Share Trip' }}
       />
+      <HomeStack.Screen 
+        name="SavedTrips" 
+        component={SavedTripsScreen} 
+        options={{ title: 'My Trips' }}
+      />
     </HomeStack.Navigator>
   );
 }
@@ -100,7 +161,7 @@ function TripsStackNavigator() {
     <TripsStack.Navigator>
       <TripsStack.Screen 
         name="Trips" 
-        component={TripsScreen} 
+        component={SavedTripsScreen} 
         options={{ headerShown: false }}
       />
       <TripsStack.Screen 
@@ -112,6 +173,31 @@ function TripsStackNavigator() {
         name="ShareTrip" 
         component={ShareTripScreen} 
         options={{ title: 'Share Trip' }}
+      />
+      <TripsStack.Screen
+        name="EditTrip"
+        component={TripDetailScreen}
+        options={{ title: 'Edit Trip' }}
+      />
+      <TripsStack.Screen 
+        name="AIPlanner" 
+        component={AITripPlannerScreen} 
+        options={{ title: 'AI Trip Planner' }}
+      />
+      <TripsStack.Screen 
+        name="AITripPlannerScreen" 
+        component={AITripPlannerScreen} 
+        options={{ title: 'AI Trip Planner' }}
+      />
+      <TripsStack.Screen 
+        name="TripSuggestionsScreen" 
+        component={TripSuggestionsScreen} 
+        options={{ headerShown: false }}
+      />
+      <TripsStack.Screen 
+        name="SavedTrips" 
+        component={SavedTripsScreen} 
+        options={{ title: 'My Trips' }}
       />
     </TripsStack.Navigator>
   );
@@ -193,6 +279,34 @@ export function SimpleAppNavigator() {
         options={{ 
           title: 'AI Trip Planner',
           headerShown: true 
+        }}
+      />
+      <Stack.Screen 
+        name="AITripPlannerScreen" 
+        component={AITripPlannerScreen} 
+        options={{ 
+          title: 'AI Trip Planner',
+          headerShown: true 
+        }}
+      />
+      <Stack.Screen 
+        name="TripSuggestionsScreen" 
+        component={TripSuggestionsScreen} 
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        name="AITripResultScreen" 
+        component={AITripResultScreen} 
+        options={{ 
+          headerShown: false
+        }}
+      />
+      <Stack.Screen
+        name="SavedTrips"
+        component={SavedTripsScreen}
+        options={{
+          title: 'My Trips',
+          headerShown: true
         }}
       />
     </Stack.Navigator>

@@ -96,7 +96,7 @@ router.post('/ai/plan', async (req, res) => {
   }
 
   const prompt = `
-You are WanderGenie, a travel planning AI assistant. Based on the user's preferences:
+You are WanderGenie, a smart travel assistant. Based on the user's preferences:
 - Trip Type: ${tripType}
 - Vibe: ${vibe}
 - Budget: ${budget}
