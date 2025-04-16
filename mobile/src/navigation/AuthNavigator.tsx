@@ -1,8 +1,8 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
+import LoginRegisterScreen from '../screens/LoginRegisterScreen';
 
 // Mock Auth Screens
-const LoginScreen = () => null;
 const RegisterScreen = () => null;
 const ForgotPasswordScreen = () => null;
 
@@ -21,7 +21,7 @@ const AuthNavigator = () => {
         headerShown: false,
       }}
     >
-      <AuthStack.Screen name="Login" component={LoginScreen} />
+      <AuthStack.Screen name="Login" component={LoginRegisterScreen} />
       <AuthStack.Screen name="Register" component={RegisterScreen} />
       <AuthStack.Screen 
         name="ForgotPassword" 
@@ -32,4 +32,4 @@ const AuthNavigator = () => {
   );
 };
 
-export default AuthNavigator; 
+export default AuthNavigator;

@@ -752,8 +752,8 @@ const HomeScreen: React.FC = () => {
           </View>
           <WelcomeHeader />
         </View>
-        <TouchableOpacity style={styles.profileButton} onPress={handleLogout}>
-          <Ionicons name="person" size={24} color="#6200ee" />
+        <TouchableOpacity onPress={() => navigation.navigate('ProfileStack', { screen: 'Profile' })}>
+          <Ionicons name="person-circle-outline" size={30} color="black" />
         </TouchableOpacity>
       </View>
       

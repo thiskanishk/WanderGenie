@@ -7,15 +7,18 @@ import { PersistGate } from 'redux-persist/integration/react';
 import * as SplashScreen from 'expo-splash-screen';
 import { NavigationContainer } from '@react-navigation/native';
 import { enableScreens } from 'react-native-screens';
-import { Alert } from 'react-native';
+import { Alert, ActivityIndicator, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Toast from 'react-native-toast-message';
 
 // Enable screens for better navigation performance
 enableScreens();
 
 import { client } from './src/api/apollo';
 import { store, persistor } from './src/store';
-import AppNavigator, { SimpleAppNavigator } from './src/navigation/AppNavigator';
+import AppNavigator from './src/navigation/AppNavigator';
 import AuthNavigator from './src/navigation/AuthNavigator';
+import OnboardingNavigator from './src/navigation/OnboardingNavigator';
 import { useAppSelector } from './src/hooks/reduxHooks';
 import { useNetworkStatus } from './src/hooks/useNetworkStatus';
 import OfflineBanner from './src/components/OfflineBanner';
@@ -39,11 +42,26 @@ interface AuthState {
   }
 }
 
+const Root = () => {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#2563EB" />
+      </View>
+    );
+  }
+
+  return user ? <AppNavigator /> : <AuthNavigator />;
+};
+
 export default function App() {
   const [appIsReady, setAppIsReady] = useState(false);
   const [fontError, setFontError] = useState(false);
+  const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
 
-  // Prepare the app (load fonts, etc)
+  // Prepare the app (load fonts, check onboarding state, etc)
   useEffect(() => {
     async function prepare() {
       try {
@@ -53,6 +71,10 @@ export default function App() {
           setFontError(true);
           console.warn('Font loading issue:', fontResult.error);
         }
+
+        // Check if the user has seen onboarding
+        const onboardingState = await AsyncStorage.getItem('hasSeenOnboarding');
+        setHasSeenOnboarding(onboardingState === 'true');
       } catch (e) {
         setFontError(true);
         console.warn('Error during app preparation:', e);
@@ -86,7 +108,7 @@ export default function App() {
     }
   }, [appIsReady, fontError]);
 
-  if (!appIsReady) {
+  if (!appIsReady || hasSeenOnboarding === null) {
     return <LoadingScreen />;
   }
 
@@ -97,14 +119,17 @@ export default function App() {
           <ThemeProvider>
             <AuthProvider>
               <SafeAreaProvider onLayout={onLayoutRootView}>
-                <NavigationContainer>
-                  <StatusBar style="auto" />
-                  {USE_SIMPLE_APP ? (
-                    <SimpleAppNavigator />
-                  ) : (
-                    <AuthAwareNavigationRoot />
-                  )}
-                </NavigationContainer>
+                <>
+                  <NavigationContainer>
+                    <StatusBar style="auto" />
+                    {hasSeenOnboarding === false ? (
+                      <OnboardingNavigator />
+                    ) : (
+                      <Root />
+                    )}
+                  </NavigationContainer>
+                  <Toast />
+                </>
                 {!USE_SIMPLE_APP && <NetworkStatusBanner />}
               </SafeAreaProvider>
             </AuthProvider>

@@ -11,12 +11,12 @@ import AITripPlannerScreen from '../screens/AITripPlannerScreen';
 import AITripResultScreen from '../screens/AITripResultScreen';
 import SavedTripsScreen from '../screens/SavedTripsScreen';
 import TripSuggestionsScreen from '../screens/TripSuggestionsScreen';
+import MyProfileScreen from '../screens/MyProfileScreen';
 
 // Create placeholder components for missing screens
 const PlaceholderScreen: React.FC = () => null;
 
 // Use placeholders for missing screens
-const ProfileScreen = PlaceholderScreen;
 const TripDetailScreen = PlaceholderScreen;
 const ChecklistScreen = PlaceholderScreen;
 const ShareTripScreen = PlaceholderScreen;
@@ -209,7 +209,7 @@ function ProfileStackNavigator() {
     <ProfileStack.Navigator>
       <ProfileStack.Screen 
         name="Profile" 
-        component={ProfileScreen} 
+        component={MyProfileScreen} 
         options={{ headerShown: false }}
       />
       <ProfileStack.Screen 
@@ -309,6 +309,7 @@ export function SimpleAppNavigator() {
           headerShown: true
         }}
       />
+      <Stack.Screen name="Profile" component={MyProfileScreen} />
     </Stack.Navigator>
   );
-} 
+}

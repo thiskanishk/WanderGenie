@@ -1,212 +1,66 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
-// Base URL for API calls
-const API_URL = 'http://192.168.1.4:5000/api/auth'; // Replace with your backend URL
+const API_URL = Platform.OS === 'android'
+  ? 'http://10.0.2.2:5000/api/auth'
+  : 'http://localhost:5000/api/auth';
 
-// Storage keys
-const TOKEN_KEY = '@wandergenie_token';
-const USER_KEY = '@wandergenie_user';
-
-// Types
-interface LoginCredentials {
-  email: string;
-  password: string;
-}
-
-interface RegisterData {
-  fullName: string;
-  email: string;
-  password: string;
-}
-
-interface AuthResponse {
-  success: boolean;
-  message: string;
-  data?: {
-    user: User;
-    tokens: {
-      accessToken: string;
-      refreshToken: string;
-    };
-  };
-  errors?: any[];
-}
-
-export interface User {
-  id: string;
-  fullName: string;
-  email: string;
-  role: string;
-  provider: string;
-  createdAt: string;
-}
-
-// Create axios instance with defaults
-const api = axios.create({
+const axiosInstance = axios.create({
   baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  timeout: 5000, // 5 seconds for faster error feedback
 });
 
-// Add authorization header interceptor
-api.interceptors.request.use(
-  async (config) => {
-    const token = await AsyncStorage.getItem(TOKEN_KEY);
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+export interface User {
+  _id: string;
+  email: string;
+  fullName?: string;
+  [key: string]: any;
+}
 
-/**
- * Login user with email and password
- */
-export const login = async (credentials: LoginCredentials): Promise<User> => {
-  try {
-    const response = await api.post<AuthResponse>('/login', credentials);
-    
-    if (response.data.success && response.data.data) {
-      // Store token and user data
-      await AsyncStorage.setItem(TOKEN_KEY, response.data.data.tokens.accessToken);
-      await AsyncStorage.setItem(USER_KEY, JSON.stringify(response.data.data.user));
-      
-      return response.data.data.user;
-    } else {
-      throw new Error(response.data.message || 'Login failed');
-    }
-  } catch (error) {
-    console.error('Login error:', error);
-    if (axios.isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.message || 'Authentication failed');
-    }
-    throw error;
-  }
-};
+export interface AuthResponse {
+  accessToken: string;
+  user: User;
+}
 
-/**
- * Register a new user
- */
-export const register = async (userData: RegisterData): Promise<User> => {
-  try {
-    const response = await api.post<AuthResponse>('/register', userData);
-    
-    if (response.data.success && response.data.data) {
-      // Store token and user data
-      await AsyncStorage.setItem(TOKEN_KEY, response.data.data.tokens.accessToken);
-      await AsyncStorage.setItem(USER_KEY, JSON.stringify(response.data.data.user));
-      
-      return response.data.data.user;
-    } else {
-      throw new Error(response.data.message || 'Registration failed');
-    }
-  } catch (error) {
-    console.error('Registration error:', error);
-    if (axios.isAxiosError(error) && error.response) {
-      throw new Error(error.response.data.message || 'Registration failed');
-    }
-    throw error;
-  }
-};
+async function login(email: string, password: string): Promise<AuthResponse> {
+  const res = await axiosInstance.post('/login', { email, password });
+  await AsyncStorage.setItem('accessToken', res.data.accessToken);
+  await AsyncStorage.setItem('user', JSON.stringify(res.data.user));
+  return res.data;
+}
 
-/**
- * Get authenticated user profile
- */
-export const getProfile = async (): Promise<User> => {
-  try {
-    const response = await api.get<{ success: boolean; data: { user: User } }>('/me');
-    
-    if (response.data.success) {
-      // Update stored user data
-      await AsyncStorage.setItem(USER_KEY, JSON.stringify(response.data.data.user));
-      return response.data.data.user;
-    } else {
-      throw new Error('Failed to fetch profile');
-    }
-  } catch (error) {
-    console.error('Get profile error:', error);
-    if (axios.isAxiosError(error) && error.response) {
-      if (error.response.status === 401) {
-        // Token expired or invalid
-        await logout();
-      }
-      throw new Error(error.response.data.message || 'Failed to fetch profile');
-    }
-    throw error;
-  }
-};
+async function register(email: string, password: string, fullName?: string): Promise<AuthResponse> {
+  const res = await axiosInstance.post('/register', { email, password, fullName });
+  await AsyncStorage.setItem('accessToken', res.data.accessToken);
+  await AsyncStorage.setItem('user', JSON.stringify(res.data.user));
+  return res.data;
+}
 
-/**
- * Logout user by removing stored token and user data
- */
-export const logout = async (): Promise<void> => {
-  try {
-    await AsyncStorage.removeItem(TOKEN_KEY);
-    await AsyncStorage.removeItem(USER_KEY);
-  } catch (error) {
-    console.error('Logout error:', error);
-  }
-};
+async function logout() {
+  await AsyncStorage.removeItem('accessToken');
+  await AsyncStorage.removeItem('user');
+}
 
-/**
- * Check if user is currently logged in
- */
-export const isAuthenticated = async (): Promise<boolean> => {
-  const token = await AsyncStorage.getItem(TOKEN_KEY);
+async function getToken(): Promise<string | null> {
+  return AsyncStorage.getItem('accessToken');
+}
+
+async function getUser(): Promise<User | null> {
+  const user = await AsyncStorage.getItem('user');
+  return user ? JSON.parse(user) : null;
+}
+
+async function isAuthenticated(): Promise<boolean> {
+  const token = await getToken();
   return !!token;
-};
-
-/**
- * Get stored user information
- */
-export const getStoredUser = async (): Promise<User | null> => {
-  try {
-    const userJson = await AsyncStorage.getItem(USER_KEY);
-    return userJson ? JSON.parse(userJson) : null;
-  } catch (error) {
-    console.error('Get stored user error:', error);
-    return null;
-  }
-};
-
-/**
- * Sends a forgot password email to the user.
- * @param {string} email - The user's email address.
- */
-export const sendForgotPasswordEmail = async (email: string) => {
-  try {
-    const response = await axios.post(`${API_URL}/forgot-password`, { email });
-    return response.data;
-  } catch (error) {
-    throw new Error(error.response?.data?.message || 'Failed to send reset link.');
-  }
-};
-
-/**
- * Resets the user's password.
- * @param {Object} params - The reset parameters.
- * @param {string} params.token - The reset token.
- * @param {string} params.newPassword - The new password.
- */
-export const resetPassword = async ({ token, newPassword }: { token: string; newPassword: string }) => {
-  try {
-    const response = await axios.post(`${API_URL}/reset-password`, { token, newPassword });
-    return response.data;
-  } catch (error) {
-    throw new Error((error as any).response?.data?.message || 'Failed to reset password.');
-  }
-};
+}
 
 export default {
   login,
   register,
-  getProfile,
   logout,
+  getToken,
+  getUser,
   isAuthenticated,
-  getStoredUser,
-  sendForgotPasswordEmail,
-  resetPassword
 };

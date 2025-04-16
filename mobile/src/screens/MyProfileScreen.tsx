@@ -7,10 +7,9 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import Toast from 'react-native-toast-message';
-import { AuthContextType, useAuthContext } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import {
   getProfile,
   updatePersonalInfo,
@@ -22,7 +21,7 @@ import {
 } from '../services/profileService';
 
 const MyProfileScreen = () => {
-  const { user, setUser, logout } = useAuthContext() as AuthContextType;
+  const { user, setUser, logout } = useAuth();
   const [loading, setLoading] = useState(false);
   const [profileInfo, setProfileInfo] = useState({
     fullName: '',
@@ -67,29 +66,23 @@ const MyProfileScreen = () => {
   };
 
   const handleDeleteAccount = async (password: string) => {
-    Alert.alert(
-      'Delete Account',
-      'Are you sure you want to delete your account? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            setLoading(true);
-            try {
-              await deleteAccount(password);
-              logout();
-              Toast.show({ type: 'success', text1: 'Account deleted successfully' });
-            } catch (error) {
-              Toast.show({ type: 'error', text1: '❌ Failed to delete account' });
-            } finally {
-              setLoading(false);
-            }
-          },
-        },
-      ]
-    );
+    Toast.show({
+      type: 'info',
+      text1: 'Delete Account',
+      text2: 'Are you sure you want to delete your account? This action cannot be undone.',
+      onPress: async () => {
+        setLoading(true);
+        try {
+          await deleteAccount(password);
+          logout();
+          Toast.show({ type: 'success', text1: 'Account deleted successfully' });
+        } catch (error) {
+          Toast.show({ type: 'error', text1: '❌ Failed to delete account' });
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
   };
 
   if (loading) {

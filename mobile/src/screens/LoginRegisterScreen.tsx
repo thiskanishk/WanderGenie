@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   View,
   TextInput,
@@ -8,886 +8,342 @@ import {
   Animated,
   KeyboardAvoidingView,
   Platform,
-  ImageBackground,
-  Dimensions,
   Alert,
-  ActivityIndicator,
   TouchableWithoutFeedback,
   Keyboard,
   ScrollView,
+  Text,
+  Dimensions,
+  ActivityIndicator,
 } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import ConfettiCannon from 'react-native-confetti-cannon';
-import * as Haptics from 'expo-haptics';
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
-import * as AppleAuthentication from 'expo-apple-authentication';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
-import AppText from '../components/AppText';
 
-// Constants
 const { width, height } = Dimensions.get('window');
-const TOP_SECTION_HEIGHT = height * 0.4;
-const FORM_SECTION_HEIGHT = height * 0.6;
+const LOGO_SIZE = 100;
+const LOGO_SIZE_SMALL = 60;
+const ANIMATION_DURATION = 250;
 
-// Background images for different screens
-const BACKGROUND_IMAGES = [
-  'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80',
-  'https://images.unsplash.com/photo-1518548419970-58e3b4079ab2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80',
-  'https://images.unsplash.com/photo-1506197603052-3cc9c3a201bd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80',
-];
-
-interface CustomInputProps {
-  icon: string;
-  placeholder: string;
-  value: string;
-  onChangeText: (text: string) => void;
-  secureTextEntry?: boolean;
-  keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
-  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
-  error?: string;
-  toggleVisibility?: () => void;
-  showVisibilityIcon?: boolean;
-  isPasswordVisible?: boolean;
-}
-
-// Custom Input component with icon and validation
-const CustomInput: React.FC<CustomInputProps> = ({ 
-  icon, 
-  placeholder, 
-  value, 
-  onChangeText, 
-  secureTextEntry = false,
-  keyboardType = 'default',
-  autoCapitalize = 'none',
-  error = '',
-  toggleVisibility,
-  showVisibilityIcon = false,
-  isPasswordVisible = false,
-}) => {
-  return (
-    <View style={styles.inputContainer}>
-      <Ionicons name={icon} size={22} color="#6B7280" style={styles.inputIcon} />
-      <TextInput
-        style={styles.input}
-        placeholder={placeholder}
-        placeholderTextColor="#9CA3AF"
-        value={value}
-        onChangeText={onChangeText}
-        secureTextEntry={secureTextEntry}
-        keyboardType={keyboardType}
-        autoCapitalize={autoCapitalize}
-        autoCorrect={false}
-      />
-      {showVisibilityIcon && (
-        <TouchableOpacity onPress={toggleVisibility} style={styles.visibilityToggle}>
-          <Ionicons
-            name={isPasswordVisible ? 'eye-off-outline' : 'eye-outline'}
-            size={22}
-            color="#6B7280"
-          />
-        </TouchableOpacity>
-      )}
-      {error ? <AppText style={styles.errorText}>{error}</AppText> : null}
-    </View>
-  );
-};
-
-// Custom Button component
-const CustomButton: React.FC<{ title: string; onPress: () => void; isLoading?: boolean; style?: object; textStyle?: object }> = ({ title, onPress, isLoading = false, style, textStyle }) => {
-  return (
-    <TouchableOpacity 
-      style={[styles.button, style]} 
-      onPress={onPress}
-      disabled={isLoading}
-      activeOpacity={0.8}
-    >
-      {isLoading ? (
-        <ActivityIndicator color="#FFFFFF" size="small" />
-      ) : (
-        <AppText style={[styles.buttonText, textStyle]}>{title}</AppText>
-      )}
-    </TouchableOpacity>
-  );
-};
-
-// Password strength component
-const PasswordStrengthMeter: React.FC<{ password: string }> = ({ password }) => {
-  const getStrength = (password: string) => {
-    if (!password) return 0;
-    
-    let score = 0;
-    
-    // Length check
-    if (password.length >= 8) score += 1;
-    
-    // Character variety check
-    if (/[A-Z]/.test(password)) score += 1;
-    if (/[0-9]/.test(password)) score += 1;
-    if (/[^A-Za-z0-9]/.test(password)) score += 1;
-    
-    return score;
-  };
-  
-  const strength = getStrength(password);
-  
-  const getColor = () => {
-    if (strength === 0) return '#D1D5DB';
-    if (strength < 2) return '#EF4444'; // Weak - Red
-    if (strength < 4) return '#F59E0B'; // Medium - Amber
-    return '#10B981'; // Strong - Green
-  };
-  
-  const getLabel = () => {
-    if (!password) return '';
-    if (strength < 2) return 'Weak';
-    if (strength < 4) return 'Medium';
-    return 'Strong';
-  };
-  
-  return (
-    <View style={styles.strengthContainer}>
-      <View style={styles.strengthBars}>
-        <View style={[styles.strengthBar, { backgroundColor: strength >= 1 ? getColor() : '#D1D5DB' }]} />
-        <View style={[styles.strengthBar, { backgroundColor: strength >= 2 ? getColor() : '#D1D5DB' }]} />
-        <View style={[styles.strengthBar, { backgroundColor: strength >= 3 ? getColor() : '#D1D5DB' }]} />
-        <View style={[styles.strengthBar, { backgroundColor: strength >= 4 ? getColor() : '#D1D5DB' }]} />
-      </View>
-      <AppText style={[styles.strengthLabel, { color: getColor() }]}>{getLabel()}</AppText>
-    </View>
-  );
-};
-
-// Divider with text
-const Divider: React.FC<{ text: string }> = ({ text }) => {
-  return (
-    <View style={styles.divider}>
-      <View style={styles.dividerLine} />
-      <AppText style={styles.dividerText}>{text}</AppText>
-      <View style={styles.dividerLine} />
-    </View>
-  );
-};
-
-// Success Toast component
-const SuccessToast: React.FC<{ message: string; visible: boolean; onHide: () => void }> = ({ message, visible, onHide }) => {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  
-  useEffect(() => {
-    if (visible) {
-      Animated.sequence([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.delay(3000),
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        onHide && onHide();
-      });
-    }
-  }, [visible]);
-  
-  if (!visible) return null;
-  
-  return (
-    <Animated.View style={[styles.toast, { opacity: fadeAnim }]}>
-      <View style={styles.toastContent}>
-        <Ionicons name="checkmark-circle" size={24} color="#10B981" />
-        <AppText style={styles.toastText}>{message}</AppText>
-      </View>
-    </Animated.View>
-  );
-};
-
-// Main LoginRegisterScreen component
-const LoginRegisterScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
-  const { login, register, error: authError, loading: authLoading, clearError } = useAuth();
-  const nav = useNavigation();
-  
-  // States for form fields
+const LoginRegisterScreen: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [acceptTerms, setAcceptTerms] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string; fullName?: string; confirmPassword?: string; terms?: string }>({});
-  const [showSuccessToast, setShowSuccessToast] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [showConfetti, setShowConfetti] = useState(false);
-  const [backgroundImage, setBackgroundImage] = useState(BACKGROUND_IMAGES[0]);
-  
-  // Animation values
-  const fadeAnim = useRef(new Animated.Value(1)).current;
-  const slideAnim = useRef(new Animated.Value(0)).current;
-  
-  // Update background image randomly
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [inputFocused, setInputFocused] = useState(false);
+
+  const { login, register, isLoading, error: authError, user } = useAuth();
+  const navigation = useNavigation();
+
+  // Animation refs
+  const logoAnim = useRef(new Animated.Value(1)).current;
+
+  // Animate logo shrink/expand on input focus
   useEffect(() => {
-    const randomIndex = Math.floor(Math.random() * BACKGROUND_IMAGES.length);
-    setBackgroundImage(BACKGROUND_IMAGES[randomIndex]);
-  }, []);
-  
-  // Update errors if authError changes
-  useEffect(() => {
-    if (authError) {
-      // Display auth error in the appropriate field
-      if (authError.includes('email') || authError.includes('Email')) {
-        setErrors({ ...errors, email: authError });
-      } else if (authError.includes('password') || authError.includes('Password')) {
-        setErrors({ ...errors, password: authError });
-      } else {
-        // Show general error as a toast
-        setSuccessMessage(authError);
-        setShowSuccessToast(true);
-      }
-      // Clear the auth error
-      clearError();
-    }
-  }, [authError]);
-  
-  // Toggle between Login and Register forms with animation
-  const toggleForm = () => {
-    // Start fade out animation
-    Animated.timing(fadeAnim, {
-      toValue: 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start(() => {
-      // Toggle form type
-      setIsLogin(!isLogin);
-      // Reset errors
-      setErrors({});
-      
-      // Start fade in animation
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
-      
-      // Slide animation for form content
-      Animated.timing(slideAnim, {
-        toValue: isLogin ? 100 : 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
-    });
-  };
-  
-  // Validate email function
-  const validateEmail = (email: string) => {
-    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return regex.test(email);
-  };
-  
-  // Validate form function
-  const validateForm = () => {
-    const newErrors: { email?: string; password?: string; fullName?: string; confirmPassword?: string; terms?: string } = {};
-    
-    if (!email) {
-      newErrors.email = 'Email is required';
-    } else if (!validateEmail(email)) {
-      newErrors.email = 'Invalid email format';
-    }
-    
-    if (!password) {
-      newErrors.password = 'Password is required';
-    } else if (password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
-    }
-    
+    Animated.timing(logoAnim, {
+      toValue: inputFocused ? 0 : 1,
+      duration: ANIMATION_DURATION,
+      useNativeDriver: false,
+    }).start();
+  }, [inputFocused]);
+
+  // Validation
+  const validate = () => {
+    if (!email.trim()) return 'Email is required';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Invalid email';
+    if (!password) return 'Password is required';
+    if (password.length < 8) return 'Password must be at least 8 characters';
     if (!isLogin) {
-      if (!fullName) {
-        newErrors.fullName = 'Full name is required';
-      }
-      
-      if (password !== confirmPassword) {
-        newErrors.confirmPassword = 'Passwords do not match';
-      }
-      
-      if (!acceptTerms) {
-        newErrors.terms = 'You must accept the terms to continue';
-      }
+      if (!fullName.trim()) return 'Full name is required';
+      if (password !== confirmPassword) return 'Passwords do not match';
     }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return null;
   };
-  
-  // Handle login function
-  const handleLogin = async () => {
-    if (validateForm()) {
-      setIsLoading(true);
-      
-      try {
+
+  // Handle submit
+  const handleSubmit = async () => {
+    const err = validate();
+    if (err) {
+      setError(err);
+      return;
+    }
+    setError(null);
+    try {
+      if (isLogin) {
         await login(email, password);
-        
-        // Show success toast
-        setSuccessMessage(`Welcome back, ${email.split('@')[0]} 👋 Your next adventure awaits.`);
-        setShowSuccessToast(true);
-        
-        // Trigger haptic feedback
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        
-        // Navigate to home screen after a short delay
-        setTimeout(() => {
-          nav.navigate('Home');
-        }, 1000);
-      } catch (error) {
-        console.error('Login error:', error);
-        // Error handling is done through the authError effect
-      } finally {
-        setIsLoading(false);
+      } else {
+        await register(email, password, fullName);
       }
+      // Navigation handled by effect
+    } catch (e) {
+      // error handled in context
     }
   };
-  
-  // Handle register function
-  const handleRegister = async () => {
-    if (validateForm()) {
-      setIsLoading(true);
-      
-      try {
-        await register(fullName, email, password);
-        
-        // Show confetti animation
-        setShowConfetti(true);
-        
-        // Show success toast
-        setSuccessMessage('Account created successfully! Welcome aboard! 🚀');
-        setShowSuccessToast(true);
-        
-        // Trigger haptic feedback
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        
-        // Navigate to home screen after a short delay
-        setTimeout(() => {
-          nav.navigate('Home');
-        }, 1500);
-      } catch (error) {
-        console.error('Registration error:', error);
-        // Error handling is done through the authError effect
-      } finally {
-        setIsLoading(false);
-      }
+
+  useEffect(() => {
+    if (user) {
+      navigation.reset({ index: 0, routes: [{ name: 'HomeScreen' }] });
     }
-  };
-  
-  // Handle Google sign-in
-  const handleGoogleSignIn = () => {
-    setIsLoading(true);
-    
-    // Simulate Google sign-in
-    setTimeout(() => {
-      setIsLoading(false);
-      setSuccessMessage("Signed in securely with Google ✔️");
-      setShowSuccessToast(true);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }, 1500);
-  };
-  
-  // Handle Apple sign-in
-  const handleAppleSignIn = () => {
-    setIsLoading(true);
-    
-    // Simulate Apple sign-in
-    setTimeout(() => {
-      setIsLoading(false);
-      setSuccessMessage("Signed in securely with Apple ✔️");
-      setShowSuccessToast(true);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }, 1500);
-  };
-  
-  // Handle forgot password
-  const handleForgotPassword = () => {
-    Alert.alert(
-      "Reset Password",
-      "A password reset link will be sent to your email address.",
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Send Link", 
-          onPress: () => {
-            if (email && validateEmail(email)) {
-              setSuccessMessage("Password reset link sent to your email ✉️");
-              setShowSuccessToast(true);
-            } else {
-              setErrors({...errors, email: 'Please enter a valid email'});
-            }
-          } 
-        }
-      ]
-    );
-  };
-  
+  }, [user]);
+
+  // Social login stubs
+  const handleGoogle = () => Alert.alert('Coming soon', 'Google login is not available yet.');
+  const handleApple = () => Alert.alert('Coming soon', 'Apple login is not available yet.');
+
+  // Input focus/blur handlers
+  const onInputFocus = () => setInputFocused(true);
+  const onInputBlur = () => setInputFocused(false);
+
+  // Animated logo size and margin
+  const logoSize = logoAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [LOGO_SIZE_SMALL, LOGO_SIZE],
+  });
+  const logoMargin = logoAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [12, 32],
+  });
+
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <StatusBar style="light" />
-      
-      {/* Background Image Section */}
-      <View style={styles.backgroundSection}>
-        <ImageBackground
-          source={{ uri: backgroundImage }}
-          style={styles.backgroundImage}
-        >
-          <BlurView intensity={20} style={styles.blurOverlay}>
-            <LinearGradient
-              colors={['rgba(0,0,0,0.2)', 'rgba(0,0,0,0.6)']}
-              style={styles.gradientOverlay}
-            >
-              <View style={styles.logoContainer}>
-                <Image
-                  source={require('../assets/logo.png')}
-                  style={styles.logo}
-                  resizeMode="contain"
-                />
-                <AppText style={styles.logoText}>WanderGenie</AppText>
-                <AppText style={styles.tagline}>Your AI Travel Companion</AppText>
-              </View>
-            </LinearGradient>
-          </BlurView>
-        </ImageBackground>
-      </View>
-      
-      {/* Form Section */}
+    <View style={styles.root}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.formSection}>
-          <View style={styles.formCard}>
-            <Animated.View
-              style={[
-                styles.formContent,
-                {
-                  opacity: fadeAnim,
-                  transform: [{ translateX: slideAnim }]
-                }
-              ]}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <Animated.View style={[styles.topSection, { paddingTop: logoMargin, paddingBottom: logoMargin }]}> 
+            <Animated.Image
+              source={require('../assets/logo.png')}
+              style={{
+                width: logoSize,
+                height: logoSize,
+                alignSelf: 'center',
+                marginBottom: 8,
+              }}
+              resizeMode="contain"
+            />
+            <Text style={styles.logoText}>WanderGenie</Text>
+            <Text style={styles.tagline}>Your AI Travel Companion</Text>
+          </Animated.View>
+          <View style={styles.bottomSection}>
+            <ScrollView
+              contentContainerStyle={styles.formScroll}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
             >
-              <AppText style={styles.formTitle}>
-                {isLogin ? 'Welcome Back' : 'Create Account'}
-              </AppText>
-              <AppText style={styles.formSubtitle}>
-                {isLogin 
-                  ? 'Sign in to continue your journey' 
-                  : 'Join us and start exploring the world'}
-              </AppText>
-              
-              {/* Registration Form Fields */}
-              {!isLogin && (
-                <CustomInput
-                  icon="person-outline"
-                  placeholder="Full Name"
-                  value={fullName}
-                  onChangeText={setFullName}
-                  autoCapitalize="words"
-                  error={errors.fullName}
+              <View style={styles.formCard}>
+                <Text style={styles.formTitle}>{isLogin ? 'Sign In' : 'Create Account'}</Text>
+                <Text style={styles.formSubtitle}>
+                  {isLogin ? 'Sign in to continue your journey' : 'Join us and start exploring the world'}
+                </Text>
+                {!isLogin && (
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Full Name"
+                    value={fullName}
+                    onChangeText={setFullName}
+                    autoCapitalize="words"
+                    onFocus={onInputFocus}
+                    onBlur={onInputBlur}
+                    returnKeyType="next"
+                  />
+                )}
+                <TextInput
+                  style={styles.input}
+                  placeholder="Email Address"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  onFocus={onInputFocus}
+                  onBlur={onInputBlur}
+                  returnKeyType="next"
                 />
-              )}
-              
-              {/* Common Form Fields */}
-              <CustomInput
-                icon="mail-outline"
-                placeholder="Email Address"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                error={errors.email}
-              />
-              
-              <CustomInput
-                icon="lock-closed-outline"
-                placeholder="Password"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                error={errors.password}
-                showVisibilityIcon={true}
-                toggleVisibility={() => setShowPassword(!showPassword)}
-                isPasswordVisible={showPassword}
-              />
-              
-              {password.length > 0 && (
-                <PasswordStrengthMeter password={password} />
-              )}
-              
-              {/* Registration-specific Fields */}
-              {!isLogin && (
-                <>
-                  <CustomInput
-                    icon="lock-closed-outline"
+                <TextInput
+                  style={styles.input}
+                  placeholder="Password"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  onFocus={onInputFocus}
+                  onBlur={onInputBlur}
+                  returnKeyType={isLogin ? 'done' : 'next'}
+                />
+                {!isLogin && (
+                  <TextInput
+                    style={styles.input}
                     placeholder="Confirm Password"
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
-                    secureTextEntry={!showConfirmPassword}
-                    error={errors.confirmPassword}
-                    showVisibilityIcon={true}
-                    toggleVisibility={() => setShowConfirmPassword(!showConfirmPassword)}
-                    isPasswordVisible={showConfirmPassword}
+                    secureTextEntry
+                    autoCapitalize="none"
+                    onFocus={onInputFocus}
+                    onBlur={onInputBlur}
+                    returnKeyType="done"
                   />
-                  
-                  <View style={styles.termsContainer}>
-                    <TouchableOpacity
-                      style={styles.checkbox}
-                      onPress={() => setAcceptTerms(!acceptTerms)}
-                    >
-                      <Ionicons
-                        name={acceptTerms ? 'checkbox' : 'square-outline'}
-                        size={22}
-                        color={acceptTerms ? '#F97316' : '#6B7280'}
-                      />
-                    </TouchableOpacity>
-                    <View style={styles.termsTextContainer}>
-                      <AppText style={styles.termsText}>
-                        I accept the{' '}
-                        <AppText style={styles.termsLink}>Terms of Service</AppText>
-                        {' '}and{' '}
-                        <AppText style={styles.termsLink}>Privacy Policy</AppText>
-                      </AppText>
-                      {errors.terms && <AppText style={styles.errorText}>{errors.terms}</AppText>}
-                    </View>
-                  </View>
-                </>
-              )}
-              
-              {/* Login-specific Fields */}
-              {isLogin && (
-                <TouchableOpacity 
-                  style={styles.forgotPasswordContainer}
-                  onPress={handleForgotPassword}
-                >
-                  <AppText style={styles.forgotPasswordText}>Forgot Password?</AppText>
-                </TouchableOpacity>
-              )}
-              
-              {/* Submit Button */}
-              <CustomButton
-                title={isLogin ? 'Log In' : 'Sign Up'}
-                onPress={isLogin ? handleLogin : handleRegister}
-                isLoading={isLoading}
-                style={styles.submitButton}
-              />
-              
-              {/* Social Login Options */}
-              <Divider text="or continue with" />
-              
-              <View style={styles.socialButtonsContainer}>
-                <TouchableOpacity 
-                  style={styles.socialButton}
-                  onPress={handleGoogleSignIn}
-                  disabled={isLoading}
-                >
-                  <Ionicons name="logo-google" size={24} color="#EA4335" />
-                  <AppText style={styles.socialButtonText}>Google</AppText>
-                </TouchableOpacity>
-                
-                {Platform.OS === 'ios' && (
-                  <TouchableOpacity 
-                    style={styles.socialButton}
-                    onPress={handleAppleSignIn}
-                    disabled={isLoading}
-                  >
-                    <Ionicons name="logo-apple" size={24} color="#000000" />
-                    <AppText style={styles.socialButtonText}>Apple</AppText>
-                  </TouchableOpacity>
                 )}
+                {error && <Text style={styles.errorText}>{error}</Text>}
+                {authError && <Text style={styles.errorText}>{authError}</Text>}
+                <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} disabled={isLoading}>
+                  {isLoading ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.submitButtonText}>{isLogin ? 'Sign In' : 'Sign Up'}</Text>
+                  )}
+                </TouchableOpacity>
+                <View style={styles.socialButtonsContainer}>
+                  <TouchableOpacity style={styles.socialButton} onPress={handleGoogle}>
+                    <Ionicons name="logo-google" size={20} color="#EA4335" style={{ marginRight: 8 }} />
+                    <Text style={styles.socialButtonText}>Continue with Google</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.socialButton} onPress={handleApple}>
+                    <Ionicons name="logo-apple" size={20} color="#000" style={{ marginRight: 8 }} />
+                    <Text style={styles.socialButtonText}>Continue with Apple</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-              
-              {/* Toggle between Login and Register */}
-              <View style={styles.toggleFormContainer}>
-                <AppText style={styles.toggleFormText}>
-                  {isLogin ? "New here? " : "Already have an account? "}
-                </AppText>
-                <TouchableOpacity onPress={toggleForm}>
-                  <AppText style={styles.toggleFormLink}>
-                    {isLogin ? "Create an account" : "Log in"}
-                  </AppText>
+              <View style={styles.toggleContainer}>
+                <Text style={styles.toggleText}>
+                  {isLogin ? 'New here? ' : 'Already have an account? '}
+                </Text>
+                <TouchableOpacity onPress={() => { setIsLogin(!isLogin); setError(null); }}>
+                  <Text style={styles.toggleLink}>
+                    {isLogin ? 'Create an account' : 'Sign in'}
+                  </Text>
                 </TouchableOpacity>
               </View>
-            </Animated.View>
+            </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </TouchableWithoutFeedback>
-      
-      {/* Success Toast */}
-      <SuccessToast
-        message={successMessage}
-        visible={showSuccessToast}
-        onHide={() => setShowSuccessToast(false)}
-      />
-      
-      {/* Confetti Cannon */}
-      {showConfetti && (
-        <ConfettiCannon
-          count={200}
-          origin={{ x: width / 2, y: 0 }}
-          autoStart={true}
-          fadeOut={true}
-          onAnimationEnd={() => setShowConfetti(false)}
-        />
-      )}
-    </KeyboardAvoidingView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
     backgroundColor: '#F3F4F6',
   },
-  backgroundSection: {
-    height: TOP_SECTION_HEIGHT,
-  },
-  backgroundImage: {
+  topSection: {
     width: '100%',
-    height: '100%',
-  },
-  blurOverlay: {
-    flex: 1,
-  },
-  gradientOverlay: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-  },
-  logoContainer: {
-    alignItems: 'center',
-  },
-  logo: {
-    width: 80,
-    height: 80,
-    marginBottom: 8,
+    backgroundColor: '#F3F4F6',
   },
   logoText: {
     fontSize: 28,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
+    fontWeight: 'bold',
+    color: '#222',
+    textAlign: 'center',
+    marginBottom: 2,
   },
   tagline: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginTop: 4,
-  },
-  formSection: {
-    height: FORM_SECTION_HEIGHT,
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  formCard: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    padding: 24,
-    paddingTop: 32,
-    height: '100%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 10,
-  },
-  formContent: {
-    flex: 1,
-  },
-  formTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1F2937',
+    fontSize: 15,
+    color: '#6B7280',
+    textAlign: 'center',
     marginBottom: 8,
   },
-  formSubtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-    marginBottom: 24,
+  bottomSection: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
   },
-  inputContainer: {
+  formScroll: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+  },
+  formCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
     marginBottom: 16,
   },
+  formTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 6,
+    color: '#222',
+  },
+  formSubtitle: {
+    fontSize: 15,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 18,
+  },
   input: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingLeft: 48,
-    paddingVertical: 14,
+    height: 48,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#F9FAFB',
+    marginBottom: 12,
     fontSize: 16,
-    color: '#1F2937',
-  },
-  inputIcon: {
-    position: 'absolute',
-    left: 16,
-    top: 14,
-  },
-  visibilityToggle: {
-    position: 'absolute',
-    right: 16,
-    top: 14,
+    color: '#222',
   },
   errorText: {
     color: '#EF4444',
-    fontSize: 12,
-    marginTop: 4,
-    marginLeft: 4,
-  },
-  forgotPasswordContainer: {
-    alignSelf: 'flex-end',
-    marginBottom: 24,
-  },
-  forgotPasswordText: {
-    color: '#F97316',
     fontSize: 14,
-    fontWeight: '600',
+    marginBottom: 8,
+    textAlign: 'center',
   },
   submitButton: {
-    backgroundColor: '#F97316',
-    borderRadius: 30,
+    backgroundColor: '#2563EB',
+    borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
-    marginBottom: 24,
+    marginTop: 4,
+    marginBottom: 10,
   },
-  buttonText: {
-    color: '#FFFFFF',
+  submitButtonText: {
+    color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E5E7EB',
-  },
-  dividerText: {
-    color: '#6B7280',
-    marginHorizontal: 16,
-    fontSize: 14,
+    fontWeight: 'bold',
   },
   socialButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 24,
+    marginTop: 8,
   },
   socialButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F3F4F6',
-    borderRadius: 12,
+    borderRadius: 8,
     paddingVertical: 12,
-    paddingHorizontal: 24,
-    flex: 1,
-    marginHorizontal: 8,
+    marginBottom: 8,
   },
   socialButtonText: {
-    color: '#1F2937',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 8,
+    fontSize: 15,
+    color: '#222',
+    fontWeight: '500',
   },
-  toggleFormContainer: {
+  toggleContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 'auto',
-    paddingBottom: Platform.OS === 'ios' ? 16 : 0,
-  },
-  toggleFormText: {
-    color: '#6B7280',
-    fontSize: 14,
-  },
-  toggleFormLink: {
-    color: '#F97316',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  termsContainer: {
-    flexDirection: 'row',
-    marginBottom: 24,
-  },
-  checkbox: {
-    marginRight: 8,
-    paddingTop: 2,
-  },
-  termsTextContainer: {
-    flex: 1,
-  },
-  termsText: {
-    color: '#6B7280',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  termsLink: {
-    color: '#F97316',
-    fontWeight: '600',
-  },
-  strengthContainer: {
-    marginBottom: 16,
-    marginTop: -8,
-  },
-  strengthBars: {
-    flexDirection: 'row',
-    marginBottom: 4,
-  },
-  strengthBar: {
-    flex: 1,
-    height: 4,
-    borderRadius: 2,
-    marginHorizontal: 2,
-    backgroundColor: '#D1D5DB',
-  },
-  strengthLabel: {
-    fontSize: 12,
-    textAlign: 'right',
-  },
-  button: {
-    padding: 15,
-    backgroundColor: '#F97316',
-    borderRadius: 30,
-    justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 12,
   },
-  toast: {
-    position: 'absolute',
-    bottom: 100,
-    left: 20,
-    right: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+  toggleText: {
+    fontSize: 15,
+    color: '#6B7280',
   },
-  toastContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  toastText: {
-    marginLeft: 12,
-    color: '#1F2937',
-    fontSize: 14,
-    flex: 1,
+  toggleLink: {
+    fontSize: 15,
+    color: '#2563EB',
+    fontWeight: 'bold',
+    marginLeft: 2,
   },
 });
 
